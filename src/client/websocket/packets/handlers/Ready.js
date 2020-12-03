@@ -1,3 +1,5 @@
+"use strict";
+
 const AbstractHandler = require('./AbstractHandler');
 
 const ClientUser = require('../../../../structures/ClientUser');

@@ -1,3 +1,5 @@
+"use strict";
+
 const AbstractHandler = require('./AbstractHandler');
 
 class ChannelCreateHandler extends AbstractHandler {

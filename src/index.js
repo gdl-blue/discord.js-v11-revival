@@ -1,4 +1,4 @@
-require('use-strict');
+"use strict";
 
 module.exports = {
   Client: require('./client/Client'),

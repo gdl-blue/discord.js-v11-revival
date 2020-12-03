@@ -1,3 +1,5 @@
+"use strict";
+
 const makeError = require('../util/MakeError');
 const makePlainError = require('../util/MakePlainError');
 

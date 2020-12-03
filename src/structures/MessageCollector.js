@@ -1,3 +1,5 @@
+"use strict";
+
 const EventEmitter = require('events').EventEmitter;
 const Collection = require('../util/Collection');
 

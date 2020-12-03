@@ -1,3 +1,5 @@
+"use strict";
+
 const Attachment = require('./MessageAttachment');
 const Embed = require('./MessageEmbed');
 const MessageReaction = require('./MessageReaction');

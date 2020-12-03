@@ -1,3 +1,5 @@
+"use strict";
+
 module.exports = function parseEmoji(text) {
   if (text.includes('%')) {
     text = decodeURIComponent(text);

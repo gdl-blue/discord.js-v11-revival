@@ -1,3 +1,5 @@
+"use strict";
+
 const VoiceWebSocket = require('./VoiceWebSocket');
 const VoiceUDP = require('./VoiceUDPClient');
 const Constants = require('../../util/Constants');

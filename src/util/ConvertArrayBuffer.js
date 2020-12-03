@@ -1,3 +1,5 @@
+"use strict";
+
 function arrayBufferToBuffer(ab) {
   const buffer = new Buffer(ab.byteLength);
   const view = new Uint8Array(ab);

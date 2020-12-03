@@ -1,3 +1,5 @@
+"use strict";
+
 module.exports = function splitMessage(text, obj) {
 	var _obj = obj;
 	var _obj$maxLength = _obj.maxLength;

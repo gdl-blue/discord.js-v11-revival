@@ -1,3 +1,5 @@
+"use strict";
+
 const Constants = require('../../util/Constants');
 const SecretKey = require('./util/SecretKey');
 const EventEmitter = require('events').EventEmitter;

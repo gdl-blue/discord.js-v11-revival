@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * A rich embed to be sent with a message
  * @param {Object} [data] Data to set in the rich embed

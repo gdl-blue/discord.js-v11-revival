@@ -1,3 +1,5 @@
+"use strict";
+
 const PCMConverters = require('../pcm/ConverterEngineList');
 const OpusEncoders = require('../opus/OpusEngineList');
 const EventEmitter = require('events').EventEmitter;

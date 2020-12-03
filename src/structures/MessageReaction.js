@@ -1,3 +1,5 @@
+"use strict";
+
 const Collection = require('../util/Collection');
 const Emoji = require('./Emoji');
 const ReactionEmoji = require('./ReactionEmoji');

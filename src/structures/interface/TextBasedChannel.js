@@ -1,3 +1,5 @@
+"use strict";
+
 const path = require('path');
 const Message = require('../Message');
 const MessageCollector = require('../MessageCollector');

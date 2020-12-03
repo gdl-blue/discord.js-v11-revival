@@ -1,3 +1,5 @@
+"use strict";
+
 // ##untested##
 
 const AbstractHandler = require('./AbstractHandler');

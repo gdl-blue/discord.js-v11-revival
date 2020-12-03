@@ -1,3 +1,5 @@
+"use strict";
+
 exports.Package = require('../../package.json');
 
 /**
@@ -365,7 +367,7 @@ const PermissionFlags = exports.PermissionFlags = {
   MANAGE_EMOJIS: 1 << 30,
 };
 
-let _ALL_PERMISSIONS = 0;
+var _ALL_PERMISSIONS = 0;
 for (const key in PermissionFlags) _ALL_PERMISSIONS |= PermissionFlags[key];
 exports.ALL_PERMISSIONS = _ALL_PERMISSIONS;
 exports.DEFAULT_PERMISSIONS = 104324097;

@@ -1,3 +1,5 @@
+"use strict";
+
 const Collection = require('../../util/Collection');
 const mergeDefault = require('../../util/MergeDefault');
 const Constants = require('../../util/Constants');

@@ -1,3 +1,5 @@
+"use strict";
+
 const Webhook = require('../structures/Webhook');
 const RESTManager = require('./rest/RESTManager');
 const ClientDataResolver = require('./ClientDataResolver');

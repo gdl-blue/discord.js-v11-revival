@@ -1,3 +1,5 @@
+"use strict";
+
 const Channel = require('./Channel');
 const Role = require('./Role');
 const PermissionOverwrites = require('./PermissionOverwrites');

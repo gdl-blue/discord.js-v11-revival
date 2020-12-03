@@ -1,3 +1,5 @@
+"use strict";
+
 const browser = typeof window !== 'undefined';
 const EventEmitter = require('events').EventEmitter;
 const Constants = require('../../util/Constants');

@@ -1,3 +1,5 @@
+"use strict";
+
 module.exports = function escapeMarkdown(text, onlyCodeBlock, onlyInlineCode) {
     if (onlyCodeBlock) return text.replace(/```/g, '`\u200b``');
     if (onlyInlineCode) return text.replace(/\\(`|\\)/g, '$1').replace(/(`|\\)/g, '\\$1');

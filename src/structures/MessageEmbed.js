@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * Represents an embed in a message (image/video preview, rich embed, etc.)
  */

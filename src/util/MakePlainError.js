@@ -1,3 +1,5 @@
+"use strict";
+
 module.exports = function makePlainError(err) {
   const obj = {};
   obj.name = err.name;

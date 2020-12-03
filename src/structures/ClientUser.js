@@ -1,3 +1,5 @@
+"use strict";
+
 const User = require('./User');
 const Collection = require('../util/Collection');
 

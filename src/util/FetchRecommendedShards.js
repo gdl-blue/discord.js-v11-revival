@@ -1,3 +1,5 @@
+"use strict";
+
 const superagent = require('superagent');
 const botGateway = require('./Constants').Endpoints.botGateway;
 

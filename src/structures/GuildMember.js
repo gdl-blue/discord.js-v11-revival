@@ -1,3 +1,5 @@
+"use strict";
+
 const TextBasedChannel = require('./interface/TextBasedChannel');
 const Role = require('./Role');
 const EvaluatedPermissions = require('./EvaluatedPermissions');

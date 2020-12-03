@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * Represents an OAuth2 Application
  */

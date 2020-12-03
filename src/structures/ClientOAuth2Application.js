@@ -1,3 +1,5 @@
+"use strict";
+
 const User = require('./User');
 const OAuth2Application = require('./OAuth2Application');
 

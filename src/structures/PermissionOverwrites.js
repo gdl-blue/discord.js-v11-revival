@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * Represents a permission overwrite for a role or member in a guild channel.
  */
