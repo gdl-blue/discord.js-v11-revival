@@ -121,7 +121,7 @@ class RESTMethods {
     }
 
     bulkDeleteMessages(channel, messages) {
-        return this.rest.makeRequest('post', `${Constants.Endpoints.channelMessages(channel.id)}/bulk_delete`, true, {
+        return this.rest.makeRequest('post', `${Constants.Endpoints.channelMessages(channel.id)}/bulk-delete`, true, {
             messages,
         }).then(() =>
             this.client.actions.MessageDeleteBulk.handle({
@@ -361,8 +361,8 @@ class RESTMethods {
         const id = this.client.resolver.resolveUserID(member);
         if (!id) return Promise.reject(new Error('Couldn\'t resolve the user ID to ban.'));
         return this.rest.makeRequest(
-            'put', `${Constants.Endpoints.guildBans(guild.id)}/${id}?delete-message-days=${deleteDays}`, true, {
-                'delete-message-days': deleteDays,
+            'put', `${Constants.Endpoints.guildBans(guild.id)}/${id}?delete_message_days=${deleteDays}`, true, {
+                'delete_message_days': deleteDays,
             }
         ).then(() => {
             if (member instanceof GuildMember) return member;

@@ -54,9 +54,10 @@ exports.DefaultOptions = {
   ws: {
     large_threshold: 250,
     compress: typeof window === 'undefined',
+	intents: 16385,
     properties: {
       $os: process ? process.platform : 'discord.js',
-      $browser: 'Discord Android',
+      $browser: 'discord.js',
       $device: 'discord.js',
       $referrer: '',
       $referring_domain: '',
@@ -77,8 +78,8 @@ exports.Errors = {
   INVALID_TOKEN: 'An invalid token was provided.',
 };
 
-const PROTOCOL_VERSION = exports.PROTOCOL_VERSION = 6;
-const HOST = exports.HOST = `https://discordapp.com`;
+const PROTOCOL_VERSION = exports.PROTOCOL_VERSION = 8;
+const HOST = exports.HOST = `https://discord.com`;
 const API = exports.API = `${HOST}/api/v${PROTOCOL_VERSION}`;
 const Endpoints = exports.Endpoints = {
   // general
@@ -86,7 +87,7 @@ const Endpoints = exports.Endpoints = {
   logout: `${API}/auth/logout`,
   gateway: `${API}/gateway`,
   botGateway: `${API}/gateway/bot`,
-  invite: (id) => `${API}/invite/${id}`,
+  invite: (id) => `${API}/invites/${id}`,
   inviteLink: (id) => `https://discord.gg/${id}`,
   assets: (asset) => `${HOST}/assets/${asset}`,
   CDN: 'https://cdn.discordapp.com',
@@ -112,7 +113,7 @@ const Endpoints = exports.Endpoints = {
   guildIcon: (guildID, hash) => `${Endpoints.CDN}/icons/${guildID}/${hash}.jpg`,
   guildSplash: (guildID, hash) => `${Endpoints.CDN}/splashes/${guildID}/${hash}.jpg`,
   guildPrune: (guildID) => `${Endpoints.guild(guildID)}/prune`,
-  guildEmbed: (guildID) => `${Endpoints.guild(guildID)}/embed`,
+  guildEmbed: (guildID) => `${Endpoints.guild(guildID)}/widget`,
   guildInvites: (guildID) => `${Endpoints.guild(guildID)}/invites`,
   guildRoles: (guildID) => `${Endpoints.guild(guildID)}/roles`,
   guildRole: (guildID, roleID) => `${Endpoints.guildRoles(guildID)}/${roleID}`,

@@ -145,7 +145,7 @@ class Guild {
          * Whether embedded images are enabled on this guild.
          * @type {boolean}
          */
-        this.embedEnabled = data.embed_enabled;
+        this.embedEnabled = data.widget_enabled;
 
         /**
          * The verification level of the guild.
@@ -726,12 +726,12 @@ class Guild {
             arraysEqual(this.features, guild.features) &&
             this.ownerID === guild.owner_id &&
             this.verificationLevel === guild.verification_level &&
-            this.embedEnabled === guild.embed_enabled;
+            this.embedEnabled === guild.widget_enabled;
 
         if (equal) {
             if (this.embedChannel) {
-                if (this.embedChannel.id !== guild.embed_channel_id) equal = false;
-            } else if (guild.embed_channel_id) {
+                if (this.embedChannel.id !== guild.widget_channel_id) equal = false;
+            } else if (guild.widget_channel_id) {
                 equal = false;
             }
         }

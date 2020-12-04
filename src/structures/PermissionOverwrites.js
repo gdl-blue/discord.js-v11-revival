@@ -27,7 +27,7 @@ class PermissionOverwrites {
      * The type of this overwrite
      * @type {string}
      */
-    this.type = data.type;
+    this.type = data.type == 0 ? 'role' : 'member';
 
     this.deny = data.deny;
     this.allow = data.allow;
