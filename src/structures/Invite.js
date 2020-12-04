@@ -87,6 +87,12 @@ class Invite {
        */
       this.inviter = this.client.dataManager.newUser(data.inviter);
     }
+	
+	// Add
+	if(data.approximate_presence_count || data.approximate_member_count) {
+		this.persenceCount = data.approximate_presence_count;
+		this.memberCount   = data.approximate_member_count;
+	}
 
     /**
      * The channel the invite is for. If this channel is already known, this will be a GuildChannel object.

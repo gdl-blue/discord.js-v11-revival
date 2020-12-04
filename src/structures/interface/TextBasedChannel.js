@@ -17,6 +17,7 @@ class TextBasedChannel {
          * @type {Collection<string, Message>}
          */
         this.messages = new Collection();
+        this.messages.cache = this.messages;
 
         /**
          * The ID of the last message in the channel, if one was sent.

@@ -30,18 +30,26 @@ class Guild {
          * @type {Collection<string, GuildMember>}
          */
         this.members = new Collection();
+        this.members.cache = this.members;
+		
+		this.members.fetch = id => {
+			if(id) return this.fetchMember(id);
+			else return this.fetchMembers();
+		};
 
         /**
          * A collection of channels that are in this guild. The key is the channel's ID, the value is the channel.
          * @type {Collection<string, GuildChannel>}
          */
         this.channels = new Collection();
+        this.channels.cache = this.channels;
 
         /**
          * A collection of roles that are in this guild. The key is the role's ID, the value is the role.
          * @type {Collection<string, Role>}
          */
         this.roles = new Collection();
+        this.roles.cache = this.roles;
 
         /**
          * A collection of presences in this guild

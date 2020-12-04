@@ -1,5 +1,7 @@
 "use strict";
 
+// const PartialTypes = require('../../util/Constants').PartialTypes;
+
 /*
 
 ABOUT ACTIONS

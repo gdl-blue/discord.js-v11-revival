@@ -61,6 +61,12 @@ class User {
          * @type {?string}
          */
         this.lastMessageID = null;
+		
+		// Like v8
+		this.typing = {
+			since: null,
+			channel: null
+		};
     }
 
     patch(data) {

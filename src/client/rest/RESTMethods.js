@@ -473,7 +473,7 @@ class RESTMethods {
     }
 
     getInvite(code) {
-        return this.rest.makeRequest('get', Constants.Endpoints.invite(code), true).then(invite =>
+        return this.rest.makeRequest('get', Constants.Endpoints.invite(code.replace('https://discord.gg/', '')), true).then(invite =>
             new Invite(this.client, invite)
         );
     }

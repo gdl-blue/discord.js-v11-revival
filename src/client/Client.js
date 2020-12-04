@@ -96,18 +96,27 @@ class Client extends EventEmitter {
          * @type {Collection<string, User>}
          */
         this.users = new Collection();
+		// v12 compatibility
+        this.users.cache = this.users;
 
         /**
          * A collection of the Client's stored guilds
          * @type {Collection<string, Guild>}
          */
         this.guilds = new Collection();
+		// v12 compatibility
+		this.guilds.cache = this.guilds;
+		
+		// Like v8
+        this.servers = this.guilds;
 
         /**
          * A collection of the Client's stored channels
          * @type {Collection<string, Channel>}
          */
         this.channels = new Collection();
+		// v12 compatibility
+		this.channels.cache = this.channels;
 
         /**
          * A collection of presences for friends of the logged in user.
@@ -239,6 +248,10 @@ class Client extends EventEmitter {
      * client.login(email, password);
      */
     login(token) {
+        return this.rest.methods.login(token);
+    }
+	
+    loginWithToken(token) {
         return this.rest.methods.login(token);
     }
 
@@ -496,9 +509,15 @@ class Client extends EventEmitter {
         if (typeof options.fetchAllMembers !== 'boolean') {
             throw new TypeError('The fetchAllMembers option must be a boolean.');
         }
+        if (typeof options.disableMentions !== 'string') {
+            throw new TypeError('The disableMentions option must be a string.');
+        }
         if (typeof options.disableEveryone !== 'boolean') {
             throw new TypeError('The disableEveryone option must be a boolean.');
         }
+		if (!Array.isArray(options.partials)) {
+			throw new TypeError('The partials option must be an Array.');
+		}
         if (typeof options.restWsBridgeTimeout !== 'number' || isNaN(options.restWsBridgeTimeout)) {
             throw new TypeError('The restWsBridgeTimeout option must be a number.');
         }

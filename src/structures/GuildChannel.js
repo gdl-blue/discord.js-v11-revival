@@ -20,6 +20,8 @@ class GuildChannel extends Channel {
      * @type {Guild}
      */
     this.guild = guild;
+	// Like v8
+    this.server = guild;
   }
 
   setup(data) {

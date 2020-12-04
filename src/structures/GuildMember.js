@@ -25,7 +25,9 @@ class GuildMember {
      * The guild that this member is part of
      * @type {Guild}
      */
-    this.guild = guild;
+    this.guild = guild
+	// Like v8
+    this.server = guild;
 
     /**
      * The user that this guild member instance Represents

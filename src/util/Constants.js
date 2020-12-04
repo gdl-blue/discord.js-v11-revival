@@ -87,7 +87,7 @@ const Endpoints = exports.Endpoints = {
   logout: `${API}/auth/logout`,
   gateway: `${API}/gateway`,
   botGateway: `${API}/gateway/bot`,
-  invite: (id) => `${API}/invites/${id.replace('https://discord.gg/', '')}`,
+  invite: (id) => `${API}/invites/${id.replace('https://discord.gg/', '')}?with_counts=true`,
   inviteLink: (id) => `https://discord.gg/${id}`,
   assets: (asset) => `${HOST}/assets/${asset}`,
   CDN: 'https://cdn.discordapp.com',
@@ -98,7 +98,7 @@ const Endpoints = exports.Endpoints = {
   userProfile: (userID) => `${Endpoints.user(userID)}/profile`,
   avatar: (userID, avatar) => {
     if (userID === '1') return avatar;
-    return `${Endpoints.CDN}/avatars/${userID}/${avatar}.${avatar.startsWith('a_') ? 'gif' : 'jpg'}?size=1024`;
+    return `${Endpoints.CDN}/avatars/${userID}/${avatar}.${avatar.startsWith('a_') ? 'gif' : 'jpg'}?size=2048`;
   },
   me: `${API}/users/@me`,
   meGuild: (guildID) => `${Endpoints.me}/guilds/${guildID}`,

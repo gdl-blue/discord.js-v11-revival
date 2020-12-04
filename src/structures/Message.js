@@ -262,6 +262,11 @@ class Message {
     get guild() {
         return this.channel.guild || null;
     }
+	
+	// Like v8
+    get server() {
+        return this.channel.guild || null;
+    }
 
     /**
      * The message contents with all mentions replaced by the equivalent text. If mentions cannot be resolved to a name,
