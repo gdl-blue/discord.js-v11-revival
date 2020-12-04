@@ -324,6 +324,7 @@ exports.MessageTypes = {
   4: 'CHANNEL_NAME_CHANGE',
   5: 'CHANNEL_ICON_CHANGE',
   6: 'PINS_ADD',
+  7: 'GUILD_MEMBER_JOIN',
 };
 
 exports.DefaultAvatars = {
