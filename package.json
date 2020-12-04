@@ -10,7 +10,7 @@
   "_inCache": true,
   "_installable": true,
   "_location": "/discord.js",
-  "_nodeVersion": "7.0.0",
+  "_nodeVersion": "5.0.0",
   "_npmOperationalInternal": {
     "host": "packages-12-west.internal.npmjs.com",
     "tmp": "tmp/discord.js-11.0.0.tgz_1483030852564_0.6023120589088649"
@@ -136,7 +136,7 @@
     "web-dist": "node ./node_modules/parallel-webpack/bin/run.js"
   },
   "types": "./typings/index.d.ts",
-  "version": "11.0.0",
+  "version": "11.8.1",
   "warnings": [
     {
       "code": "ENOTSUP",

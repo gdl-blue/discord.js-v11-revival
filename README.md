@@ -1,3 +1,7 @@
+ * original Discord.js repository: https://github.com/discord-js/discord.js
+
+- - -
+
 <div align="center">
   <br />
   <p>

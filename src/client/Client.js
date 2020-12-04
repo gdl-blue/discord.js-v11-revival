@@ -425,6 +425,34 @@ class Client extends EventEmitter {
         clearInterval(interval);
         this._intervals.delete(interval);
     }
+	
+	// Like DJS v8
+    startTyping(channel, count) {
+        if (typeof count !== 'undefined' && count < 1) throw new RangeError('Count must be at least 1.');
+        if (!this.user._typing.has(channel.id)) {
+            this.user._typing.set(channel.id, {
+                count: count || 1,
+                interval: this.setInterval(() => {
+                    this.rest.methods.sendTyping(channel.id);
+                }, 4000),
+            });
+            this.rest.methods.sendTyping(channel.id);
+        } else {
+            const entry = this.user._typing.get(channel.id);
+            entry.count = count || entry.count + 1;
+        }
+    }
+
+    stopTyping(channel, force) {
+        if (this.user._typing.has(channel.id)) {
+            const entry = this.user._typing.get(channel.id);
+            entry.count--;
+            if (entry.count <= 0 || force) {
+                this.clearInterval(entry.interval);
+                this.user._typing.delete(channel.id);
+            }
+        }
+    }
 
     _pong(startTime) {
         this.pings.unshift(Date.now() - startTime);

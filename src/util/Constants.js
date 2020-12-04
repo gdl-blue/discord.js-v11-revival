@@ -54,7 +54,7 @@ exports.DefaultOptions = {
   ws: {
     large_threshold: 250,
     compress: typeof window === 'undefined',
-	intents: 16385,
+	intents: 16383,
     properties: {
       $os: process ? process.platform : 'discord.js',
       $browser: 'discord.js',
@@ -87,7 +87,7 @@ const Endpoints = exports.Endpoints = {
   logout: `${API}/auth/logout`,
   gateway: `${API}/gateway`,
   botGateway: `${API}/gateway/bot`,
-  invite: (id) => `${API}/invites/${id}`,
+  invite: (id) => `${API}/invites/${id.replace('https://discord.gg/', '')}`,
   inviteLink: (id) => `https://discord.gg/${id}`,
   assets: (asset) => `${HOST}/assets/${asset}`,
   CDN: 'https://cdn.discordapp.com',
