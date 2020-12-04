@@ -509,15 +509,9 @@ class Client extends EventEmitter {
         if (typeof options.fetchAllMembers !== 'boolean') {
             throw new TypeError('The fetchAllMembers option must be a boolean.');
         }
-        if (typeof options.disableMentions !== 'string') {
-            throw new TypeError('The disableMentions option must be a string.');
-        }
         if (typeof options.disableEveryone !== 'boolean') {
             throw new TypeError('The disableEveryone option must be a boolean.');
         }
-		if (!Array.isArray(options.partials)) {
-			throw new TypeError('The partials option must be an Array.');
-		}
         if (typeof options.restWsBridgeTimeout !== 'number' || isNaN(options.restWsBridgeTimeout)) {
             throw new TypeError('The restWsBridgeTimeout option must be a number.');
         }

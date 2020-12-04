@@ -52,6 +52,7 @@ class RESTMethods {
 		var disableEveryone = _obj.disableEveryone;
 		var split = _obj.split;
 		var code = _obj.code;
+		var reference = _obj.reference;
 
         return new Promise((resolve, reject) => {
             if (typeof content !== 'undefined') content = this.client.resolver.resolveString(content);
@@ -82,7 +83,7 @@ class RESTMethods {
                     }(content, 0));
                 } else {
                     this.rest.makeRequest('post', Constants.Endpoints.channelMessages(chan.id), true, {
-                        content, tts, nonce, embed,
+                        content, tts, nonce, embed, message_reference: reference,
                     }, file).then(data => resolve(this.client.actions.MessageCreate.handle(data).message), reject);
                 }
             };

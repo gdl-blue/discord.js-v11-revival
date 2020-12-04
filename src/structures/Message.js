@@ -484,6 +484,26 @@ class Message {
         content = `${this.guild || this.channel.type === 'group' ? `${this.author}, ` : ''}${content}`;
         return this.channel.send(content, options);
     }
+	
+    reply2(content, ping, options) { options = options || {};
+		options.reference = {
+			message_id: this.id,
+			channel_id: this.channel.id,
+			guild_id:   this.guild.id
+		};
+        return this.channel.send(content, options);
+    }
+	
+	quote(content, options) { options = options || {};
+		const orgmsg = this.content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+		var omq = '';
+		for(var ln of orgmsg.split('\n')) {
+			omq += '> ' + ln + '\n';
+		}
+		
+        content = omq + `${this.member} ${content}`;
+        return this.channel.send(content, options);
+	}
 
     /**
      * Fetches the webhook used to create this message.
