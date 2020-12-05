@@ -81,6 +81,7 @@ class TextBasedChannel {
         } else if (!options) {
             options = {};
         }
+		if (options.embed && options.embed.file) options.file = options.embed.file;
         if (options.file) {
             if (typeof options.file === 'string') options.file = { attachment: options.file };
             if (!options.file.name) {
@@ -169,6 +170,15 @@ class TextBasedChannel {
      *     .catch(console.error);
      */
     fetchMessage(messageID) {
+		// https://github.com/discordjs/discord.js/commit/64ce829ab2705e987beb72a9823d31b981775d73
+		if (!this.client.user.bot) {
+			return this.fetchMessages({ limit: 1, around: messageID }).then(messages => {
+				const msg = messages.first();
+				if (msg.id !== messageID) throw new Error('Message not found.');
+				return msg;
+			});
+		}
+		
         return this.client.rest.methods.getChannelMessage(this, messageID).then(data => {
             const msg = data instanceof Message ? data : new Message(this, data, this.client);
             this._cacheMessage(msg);

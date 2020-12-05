@@ -65,6 +65,13 @@ class RichEmbed {
      * @type {Object}
      */
     this.footer = data.footer;
+	
+	
+    /**
+     * File to upload alongside this Embed
+     * @type {string}
+     */
+    this.file = data.file;
   }
 
   /**
@@ -162,6 +169,16 @@ class RichEmbed {
     this.fields.push({ name: String(name), value: value, inline });
     return this;
   }
+  
+  // https://github.com/discordjs/discord.js/commit/cc3e7b26b1b3c331672e03f935274246212a8526
+  /**
+   * Convenience function for `<RichEmbed>.addField('\u200B', '\u200B', inline)`.
+   * @param {boolean} [inline=false] Set the field to display inline
+   * @returns {RichEmbed} This embed
+   */
+  addBlankField(inline) { if(inline === undefined) inline = false;
+    return this.addField('\u200B', '\u200B', inline);
+  }
 
   /**
    * Set the thumbnail of this embed
@@ -193,6 +210,19 @@ class RichEmbed {
     text = resolveString(text);
     if (text.length > 2048) throw new RangeError('RichEmbed footer text may not exceed 2048 characters.');
     this.footer = { text, icon_url: icon };
+    return this;
+  }
+  
+  // https://github.com/discordjs/discord.js/commit/db5259cdf15bea3b77d6178e567783a7f828b1d1
+  /**
+   * Sets the file to upload alongside the embed. This file can be accessed via `attachment://fileName.extension` when
+   * setting an embed image or author/footer icons. Only one file may be attached.
+   * @param {FileOptions|string} file Local path or URL to the file to attach, or valid FileOptions for a file to attach
+   * @returns {RichEmbed} This embed
+   */
+  attachFile(file) {
+    if (this.file) throw new RangeError('You may not upload more than one file at once.');
+    this.file = file;
     return this;
   }
 }

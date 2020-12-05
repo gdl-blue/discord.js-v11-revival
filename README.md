@@ -1,5 +1,4 @@
  * original Discord.js repository: https://github.com/discord-js/discord.js
- * Discord.js contributors: https://github.com/discordjs/discord.js/graphs/contributors
 
 - - -
 

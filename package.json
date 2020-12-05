@@ -94,7 +94,7 @@
     "tarball": "https://registry.npmjs.org/discord.js/-/discord.js-11.0.0.tgz"
   },
   "engines": {
-    "node": ">=6.0.0"
+    "node": ">=5.0.0"
   },
   "gitHead": "c8f6b6b0596c50dfb0d910dca88b5a32931041b6",
   "homepage": "https://github.com/hydrabolt/discord.js#readme",
@@ -136,20 +136,13 @@
     "web-dist": "node ./node_modules/parallel-webpack/bin/run.js"
   },
   "types": "./typings/index.d.ts",
-  "version": "11.8.5",
+  "version": "11.9.0",
   "warnings": [
     {
       "code": "ENOTSUP",
       "pkgid": "discord.js@11.0.0",
       "required": {
-        "node": ">=6.0.0"
-      }
-    },
-    {
-      "code": "ENOTSUP",
-      "pkgid": "discord.js@11.0.0",
-      "required": {
-        "node": ">=6.0.0"
+        "node": ">=5.0.0"
       }
     }
   ]

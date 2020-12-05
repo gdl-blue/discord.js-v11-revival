@@ -49,6 +49,8 @@ class Emoji {
      * @type {boolean}
      */
     this.managed = data.managed;
+	
+	this.animated = data.animated;
 
     this._roles = data.roles;
   }
@@ -90,7 +92,8 @@ class Emoji {
    * @readonly
    */
   get url() {
-    return Constants.Endpoints.emoji(this.id);
+	// https://github.com/discordjs/discord.js/commit/659e89e8cd350c0e3458383c14c6f22248e1d9ff
+    return Constants.Endpoints.emoji(this.id, this.animated ? 'gif' : 'png');
   }
 
   /**
@@ -102,7 +105,12 @@ class Emoji {
    * msg.reply(`Hello! ${emoji}`);
    */
   toString() {
-    return this.requiresColons ? `<:${this.name}:${this.id}>` : this.name;
+	// https://github.com/discordjs/discord.js/commit/659e89e8cd350c0e3458383c14c6f22248e1d9ff
+    if (!this.id || !this.requiresColons) {
+      return this.name;
+    }
+
+    return `<${this.animated ? 'a' : ''}:${this.name}:${this.id}>`;
   }
 
   /**

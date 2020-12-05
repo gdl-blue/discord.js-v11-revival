@@ -26,8 +26,6 @@ class GuildMember {
      * @type {Guild}
      */
     this.guild = guild
-	// Like v8
-    this.server = guild;
 
     /**
      * The user that this guild member instance Represents
@@ -139,6 +137,49 @@ class GuildMember {
     }
 
     return list;
+  }
+  
+  // https://github.com/discordjs/discord.js/commit/e7b0afbd1f58c14b1a54d39396f270613e90c35d
+  /**
+   * The role of the member used to set their color.
+   * @type {?Role}
+   * @readonly
+   */
+  get colorRole() {
+    const coloredRoles = this.roles.filter(role => role.color);
+    if (!coloredRoles.size) return null;
+    return coloredRoles.reduce((prev, role) => !prev || role.comparePositionTo(prev) > 0 ? role : prev);
+  }
+
+  /**
+   * The displayed color of the member in base 10.
+   * @type {number}
+   * @readonly
+   */
+  get displayColor() {
+    const role = this.colorRole;
+    return (role && role.color) || 0;
+  }
+
+  /**
+   * The displayed color of the member in hexadecimal.
+   * @type {string}
+   * @readonly
+   */
+  get displayHexColor() {
+    const role = this.colorRole;
+    return (role && role.hexColor) || '#000000';
+  }
+
+  /**
+   * The role of the member used to hoist them in a separate category in the users list.
+   * @type {?Role}
+   * @readonly
+   */
+  get hoistRole() {
+    const hoistedRoles = this.roles.filter(role => role.hoist);
+    if (!hoistedRoles.size) return null;
+    return hoistedRoles.reduce((prev, role) => !prev || role.comparePositionTo(prev) > 0 ? role : prev);
   }
 
   /**
@@ -420,6 +461,10 @@ class GuildMember {
    */
   ban(deleteDays) {
     return this.client.rest.methods.banGuildMember(this.guild, this, deleteDays || 0);
+  }
+  
+  get server() {
+	  return this.guild;
   }
 
   /**

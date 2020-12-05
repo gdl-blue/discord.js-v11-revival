@@ -106,9 +106,6 @@ class Client extends EventEmitter {
         this.guilds = new Collection();
 		// v12 compatibility
 		this.guilds.cache = this.guilds;
-		
-		// Like v8
-        this.servers = this.guilds;
 
         /**
          * A collection of the Client's stored channels
@@ -229,6 +226,10 @@ class Client extends EventEmitter {
     get browser() {
         return typeof window !== 'undefined';
     }
+	
+	get servers() {
+		return this.guilds;
+	}
 
     /**
      * Logs the client in. If successful, resolves with the account's token. <warn>If you're making a bot, it's

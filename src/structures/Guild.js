@@ -202,6 +202,11 @@ class Guild {
                 this._setPresence(presence.user.id, presence);
             }
         }
+	
+		// Add
+		if(data.approximate_presence_count) {
+			this.presenceCount = data.approximate_presence_count;
+		}
 
         this._rawVoiceStates = new Collection();
         if (data.voice_states) {

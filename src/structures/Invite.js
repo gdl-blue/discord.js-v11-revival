@@ -90,7 +90,7 @@ class Invite {
 	
 	// Add
 	if(data.approximate_presence_count || data.approximate_member_count) {
-		this.persenceCount = data.approximate_presence_count;
+		this.presenceCount = data.approximate_presence_count;
 		this.memberCount   = data.approximate_member_count;
 	}
 

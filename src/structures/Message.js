@@ -263,7 +263,6 @@ class Message {
         return this.channel.guild || null;
     }
     
-    // Like v8
     get server() {
         return this.channel.guild || null;
     }

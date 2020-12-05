@@ -66,6 +66,9 @@ class Game {
      * @type {?string}
      */
     this.url = data.url || null;
+	
+	this.details = data.details || null;
+	this.state = data.state || null;
   }
 
   /**

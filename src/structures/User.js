@@ -40,10 +40,6 @@ class User {
          */
         this.discriminator = data.discriminator;
 		
-		// Ported 11.0 because 11.1+ uses snekfetch
-		// but 11.0 does not have <user>.tag
-		this.tag = data.username + '#' + data.discriminator
-		
         /**
          * The ID of the user's avatar
          * @type {string}
@@ -106,6 +102,24 @@ class User {
         }
         return new Presence();
     }
+	
+    get status() {
+        return this.presence.status;
+    }
+	
+	get customStatus() {
+		const prec = this.presence;
+
+		try {
+			if(prec.game.name == 'Custom Status') {
+				return prec.game.state;
+			} else {
+				return null;
+			}
+		} catch(e) {
+			return null;
+		}
+	}
 
     /**
      * A link to the user's avatar (if they have one, otherwise null)
@@ -146,6 +160,12 @@ class User {
     get note() {
         return this.client.user.notes.get(this.id) || null;
     }
+	
+	get tag() {
+		// Ported 11.0 because 11.1+ uses snekfetch
+		// but 11.0 does not have <user>.tag
+		return this.client.user.username + '#' + this.client.user.discriminator;
+	}
 
     /**
      * Check whether the user is typing in a channel.

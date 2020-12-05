@@ -109,22 +109,22 @@ const Endpoints = exports.Endpoints = {
 
   // guilds
   guilds: `${API}/guilds`,
-  guild: (guildID) => `${Endpoints.guilds}/${guildID}`,
+  guild: (guildID, withCounts) => `${Endpoints.guilds}/${guildID}${withCounts == 0 ? '' : '?with_counts=true'}`,
   guildIcon: (guildID, hash) => `${Endpoints.CDN}/icons/${guildID}/${hash}.jpg`,
   guildSplash: (guildID, hash) => `${Endpoints.CDN}/splashes/${guildID}/${hash}.jpg`,
-  guildPrune: (guildID) => `${Endpoints.guild(guildID)}/prune`,
-  guildEmbed: (guildID) => `${Endpoints.guild(guildID)}/widget`,
-  guildInvites: (guildID) => `${Endpoints.guild(guildID)}/invites`,
-  guildRoles: (guildID) => `${Endpoints.guild(guildID)}/roles`,
+  guildPrune: (guildID) => `${Endpoints.guild(guildID, 0)}/prune`,
+  guildEmbed: (guildID) => `${Endpoints.guild(guildID, 0)}/widget`,
+  guildInvites: (guildID) => `${Endpoints.guild(guildID, 0)}/invites`,
+  guildRoles: (guildID) => `${Endpoints.guild(guildID, 0)}/roles`,
   guildRole: (guildID, roleID) => `${Endpoints.guildRoles(guildID)}/${roleID}`,
-  guildBans: (guildID) => `${Endpoints.guild(guildID)}/bans`,
-  guildIntegrations: (guildID) => `${Endpoints.guild(guildID)}/integrations`,
-  guildMembers: (guildID) => `${Endpoints.guild(guildID)}/members`,
+  guildBans: (guildID) => `${Endpoints.guild(guildID, 0)}/bans`,
+  guildIntegrations: (guildID) => `${Endpoints.guild(guildID, 0)}/integrations`,
+  guildMembers: (guildID) => `${Endpoints.guild(guildID, 0)}/members`,
   guildMember: (guildID, memberID) => `${Endpoints.guildMembers(guildID)}/${memberID}`,
   guildMemberRole: (guildID, memberID, roleID) => `${Endpoints.guildMember(guildID, memberID)}/roles/${roleID}`,
   guildMemberNickname: (guildID) => `${Endpoints.guildMember(guildID, '@me')}/nick`,
-  guildChannels: (guildID) => `${Endpoints.guild(guildID)}/channels`,
-  guildEmojis: (guildID) => `${Endpoints.guild(guildID)}/emojis`,
+  guildChannels: (guildID) => `${Endpoints.guild(guildID, 0)}/channels`,
+  guildEmojis: (guildID) => `${Endpoints.guild(guildID, 0)}/emojis`,
 
   // channels
   channels: `${API}/channels`,
@@ -155,7 +155,7 @@ const Endpoints = exports.Endpoints = {
   getApp: (id) => `${API}/oauth2/authorize?client_id=${id}`,
 
   // emoji
-  emoji: (emojiID) => `${Endpoints.CDN}/emojis/${emojiID}.png`,
+  emoji: (emojiID, fmt) => `${Endpoints.CDN}/emojis/${emojiID}.${fmt || 'png'}`,
 };
 
 exports.Status = {
