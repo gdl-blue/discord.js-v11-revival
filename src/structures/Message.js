@@ -262,8 +262,8 @@ class Message {
     get guild() {
         return this.channel.guild || null;
     }
-	
-	// Like v8
+    
+    // Like v8
     get server() {
         return this.channel.guild || null;
     }
@@ -484,26 +484,34 @@ class Message {
         content = `${this.guild || this.channel.type === 'group' ? `${this.author}, ` : ''}${content}`;
         return this.channel.send(content, options);
     }
-	
+    
     reply2(content, ping, options) { options = options || {};
-		options.reference = {
-			message_id: this.id,
-			channel_id: this.channel.id,
-			guild_id:   this.guild.id
-		};
+        options.reference = {
+            message_id: this.id,
+            channel_id: this.channel.id,
+            guild_id:   this.guild.id
+        };
+        
+        if(ping == 0) {  // false == 0 is true
+            options.allowed_mentions = {
+                parse: ["users", "roles", "everyone"],
+                replied_user: false
+            };
+        }
+        
         return this.channel.send(content, options);
     }
-	
-	quote(content, options) { options = options || {};
-		const orgmsg = this.content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-		var omq = '';
-		for(var ln of orgmsg.split('\n')) {
-			omq += '> ' + ln + '\n';
-		}
-		
+    
+    quote(content, options) { options = options || {};
+        const orgmsg = this.content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        var omq = '';
+        for(var ln of orgmsg.split('\n')) {
+            omq += '> ' + ln + '\n';
+        }
+        
         content = omq + `${this.member} ${content}`;
         return this.channel.send(content, options);
-	}
+    }
 
     /**
      * Fetches the webhook used to create this message.

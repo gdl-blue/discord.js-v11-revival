@@ -53,6 +53,7 @@ class RESTMethods {
 		var split = _obj.split;
 		var code = _obj.code;
 		var reference = _obj.reference;
+		var allowed_mentions = _obj.allowed_mentions;
 
         return new Promise((resolve, reject) => {
             if (typeof content !== 'undefined') content = this.client.resolver.resolveString(content);
@@ -83,7 +84,7 @@ class RESTMethods {
                     }(content, 0));
                 } else {
                     this.rest.makeRequest('post', Constants.Endpoints.channelMessages(chan.id), true, {
-                        content, tts, nonce, embed, message_reference: reference,
+                        content, tts, nonce, embed, message_reference: reference, allowed_mentions,
                     }, file).then(data => resolve(this.client.actions.MessageCreate.handle(data).message), reject);
                 }
             };
