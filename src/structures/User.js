@@ -164,7 +164,7 @@ class User {
 	get tag() {
 		// Ported 11.0 because 11.1+ uses snekfetch
 		// but 11.0 does not have <user>.tag
-		return this.client.user.username + '#' + this.client.user.discriminator;
+		return this.username + '#' + this.discriminator;
 	}
 
     /**
