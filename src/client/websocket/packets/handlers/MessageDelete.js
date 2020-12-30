@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const AbstractHandler = require('./AbstractHandler');
 const Constants = require('../../../../util/Constants');
@@ -13,7 +13,7 @@ class MessageDeleteHandler extends AbstractHandler {
 }
 
 /**
- * Emitted whenever a message is deleted
+ * Emitted whenever a message is deleted.
  * @event Client#messageDelete
  * @param {Message} message The deleted message
  */

@@ -1,7 +1,12 @@
-"use strict";
+'use strict';
+
+const Attachment = require('./Attachment');
+const MessageEmbed = require('./MessageEmbed');
+const util = require('../util/Util');
+let ClientDataResolver;
 
 /**
- * A rich embed to be sent with a message
+ * A rich embed to be sent with a message with a fluent interface for creation.
  * @param {Object} [data] Data to set in the rich embed
  */
 class RichEmbed {
@@ -65,41 +70,46 @@ class RichEmbed {
      * @type {Object}
      */
     this.footer = data.footer;
-	
-	
+
     /**
      * File to upload alongside this Embed
-     * @type {string}
+     * @type {FileOptions|string|Attachment}
      */
     this.file = data.file;
+
+    /**
+     * The files to upload alongside this Embed
+     * @type {Array<FileOptions|string|Attachment>}
+     */
+    this.files = [];
   }
 
   /**
-   * Sets the title of this embed
+   * Sets the title of this embed.
    * @param {StringResolvable} title The title
    * @returns {RichEmbed} This embed
    */
   setTitle(title) {
-    title = resolveString(title);
+    title = util.resolveString(title);
     if (title.length > 256) throw new RangeError('RichEmbed titles may not exceed 256 characters.');
     this.title = title;
     return this;
   }
 
   /**
-   * Sets the description of this embed
+   * Sets the description of this embed.
    * @param {StringResolvable} description The description
    * @returns {RichEmbed} This embed
    */
   setDescription(description) {
-    description = resolveString(description);
+    description = util.resolveString(description);
     if (description.length > 2048) throw new RangeError('RichEmbed descriptions may not exceed 2048 characters.');
     this.description = description;
     return this;
   }
 
   /**
-   * Sets the URL of this embed
+   * Sets the URL of this embed.
    * @param {string} url The URL
    * @returns {RichEmbed} This embed
    */
@@ -109,68 +119,52 @@ class RichEmbed {
   }
 
   /**
-   * Sets the color of this embed
-   * @param {string|number|number[]} color The color to set
+   * Sets the color of this embed.
+   * @param {ColorResolvable} color The color of the embed
    * @returns {RichEmbed} This embed
    */
   setColor(color) {
-    let radix = 10;
-    if (color instanceof Array) {
-      color = (color[0] << 16) + (color[1] << 8) + color[2];
-    } else if (typeof color === 'string' && color.startsWith('#')) {
-      radix = 16;
-      color = color.replace('#', '');
-    }
-    color = parseInt(color, radix);
-    if (color < 0 || color > 0xFFFFFF) {
-      throw new RangeError('RichEmbed color must be within the range 0 - 16777215 (0xFFFFFF).');
-    } else if (color && isNaN(color)) {
-      throw new TypeError('Unable to convert RichEmbed color to a number.');
-    }
-    this.color = color;
+    if (!ClientDataResolver) ClientDataResolver = require('../client/ClientDataResolver');
+    this.color = ClientDataResolver.resolveColor(color);
     return this;
   }
 
   /**
-   * Sets the author of this embed
+   * Sets the author of this embed.
    * @param {StringResolvable} name The name of the author
    * @param {string} [icon] The icon URL of the author
    * @param {string} [url] The URL of the author
    * @returns {RichEmbed} This embed
    */
   setAuthor(name, icon, url) {
-    this.author = { name: resolveString(name), icon_url: icon, url };
+    this.author = { name: util.resolveString(name), icon_url: icon, url };
     return this;
   }
 
   /**
-   * Sets the timestamp of this embed
-   * @param {Date} [timestamp=current date] The timestamp
+   * Sets the timestamp of this embed.
+   * @param {Date|number} [timestamp=Date.now()] The timestamp or date
    * @returns {RichEmbed} This embed
    */
-  setTimestamp(timestamp) {
-    this.timestamp = timestamp || new Date();
+  setTimestamp(timestamp) { if(timestamp === undefined) timestamp = Date.now();
+    if (timestamp instanceof Date) timestamp = timestamp.getTime();
+    this.timestamp = timestamp;
     return this;
   }
 
   /**
-   * Adds a field to the embed (max 25)
+   * Adds a field to the embed (max 25).
    * @param {StringResolvable} name The name of the field
    * @param {StringResolvable} value The value of the field
    * @param {boolean} [inline=false] Set the field to display inline
    * @returns {RichEmbed} This embed
    */
-  addField(name, value, inline) { inline = inline || false;
+  addField(name, value, inline) { if(inline === undefined) inline = false;
     if (this.fields.length >= 25) throw new RangeError('RichEmbeds may not exceed 25 fields.');
-    name = resolveString(name);
-    if (name.length > 256) throw new RangeError('RichEmbed field names may not exceed 256 characters.');
-    value = resolveString(value);
-    if (value.length > 1024) throw new RangeError('RichEmbed field values may not exceed 1024 characters.');
-    this.fields.push({ name: String(name), value: value, inline });
+    this.fields.push(this.constructor.normalizeField(name, value, inline));
     return this;
   }
-  
-  // https://github.com/discordjs/discord.js/commit/cc3e7b26b1b3c331672e03f935274246212a8526
+
   /**
    * Convenience function for `<RichEmbed>.addField('\u200B', '\u200B', inline)`.
    * @param {boolean} [inline=false] Set the field to display inline
@@ -181,7 +175,64 @@ class RichEmbed {
   }
 
   /**
-   * Set the thumbnail of this embed
+  * @typedef {Object} EmbedField
+  * @property {string} name The name of this field
+  * @property {string} value The value of this field
+  * @property {boolean} inline If this field will be displayed inline
+  */
+
+  /**
+  * @typedef {Object} EmbedFieldData
+  * @property {StringResolvable} name The name of this field
+  * @property {StringResolvable} value The value of this field
+  * @property {boolean} [inline=false] If this field will be displayed inline
+  */
+
+  /**
+   * Removes, replaces, and inserts fields in the embed (max 25).
+   * @param {number} index The index to start at
+   * @param {number} deleteCount The number of fields to remove
+   * @param {...EmbedFieldData} [fields] The replacing field objects
+   * @returns {RichEmbed}
+   */
+  spliceFields(index$jscomp$54, deleteCount$jscomp$0) {
+	  function _toConsumableArray(arr$jscomp$8) {
+		  if (Array.isArray(arr$jscomp$8)) {
+			var i$jscomp$3 = 0;
+			var arr2$jscomp$0 = Array(arr$jscomp$8.length);
+			for (; i$jscomp$3 < arr$jscomp$8.length; i$jscomp$3++) {
+			  arr2$jscomp$0[i$jscomp$3] = arr$jscomp$8[i$jscomp$3];
+			}
+			return arr2$jscomp$0;
+		  } else {
+			return Array.from(arr$jscomp$8);
+		  }
+		}
+	  
+	  var _this$jscomp$0 = this;
+	  var _len$jscomp$0 = arguments.length;
+	  var fields$jscomp$0 = Array(_len$jscomp$0 > 2 ? _len$jscomp$0 - 2 : 0);
+	  var _key$jscomp$0 = 2;
+	  for (; _key$jscomp$0 < _len$jscomp$0; _key$jscomp$0++) {
+		fields$jscomp$0[_key$jscomp$0 - 2] = arguments[_key$jscomp$0];
+	  }
+	  if (fields$jscomp$0) {
+		var _fields$jscomp$0;
+		var mapper$jscomp$0 = function mapper$jscomp$1(_ref$jscomp$0) {
+		  var name$jscomp$64 = _ref$jscomp$0.name;
+		  var value$jscomp$84 = _ref$jscomp$0.value;
+		  var inline$jscomp$0 = _ref$jscomp$0.inline;
+		  return _this$jscomp$0.constructor.normalizeField(name$jscomp$64, value$jscomp$84, inline$jscomp$0);
+		};
+		(_fields$jscomp$0 = this.fields).splice.apply(_fields$jscomp$0, [index$jscomp$54, deleteCount$jscomp$0].concat(_toConsumableArray(fields$jscomp$0.map(mapper$jscomp$0))));
+	  } else {
+		this.fields.splice(index$jscomp$54, deleteCount$jscomp$0);
+	  }
+	  return this;
+	}
+
+  /**
+   * Set the thumbnail of this embed.
    * @param {string} url The URL of the thumbnail
    * @returns {RichEmbed} This embed
    */
@@ -191,8 +242,8 @@ class RichEmbed {
   }
 
   /**
-   * Set the image of this embed
-   * @param {string} url The URL of the thumbnail
+   * Set the image of this embed.
+   * @param {string} url The URL of the image
    * @returns {RichEmbed} This embed
    */
   setImage(url) {
@@ -201,36 +252,108 @@ class RichEmbed {
   }
 
   /**
-   * Sets the footer of this embed
+   * Sets the footer of this embed.
    * @param {StringResolvable} text The text of the footer
    * @param {string} [icon] The icon URL of the footer
    * @returns {RichEmbed} This embed
    */
   setFooter(text, icon) {
-    text = resolveString(text);
+    text = util.resolveString(text);
     if (text.length > 2048) throw new RangeError('RichEmbed footer text may not exceed 2048 characters.');
     this.footer = { text, icon_url: icon };
     return this;
   }
-  
-  // https://github.com/discordjs/discord.js/commit/db5259cdf15bea3b77d6178e567783a7f828b1d1
+
   /**
    * Sets the file to upload alongside the embed. This file can be accessed via `attachment://fileName.extension` when
    * setting an embed image or author/footer icons. Only one file may be attached.
-   * @param {FileOptions|string} file Local path or URL to the file to attach, or valid FileOptions for a file to attach
+   * @param {FileOptions|string|Attachment} file Local path or URL to the file to attach,
+   * or valid FileOptions for a file to attach
    * @returns {RichEmbed} This embed
    */
   attachFile(file) {
     if (this.file) throw new RangeError('You may not upload more than one file at once.');
+    if (file instanceof Attachment) file = file.file;
     this.file = file;
     return this;
+  }
+
+  /**
+   * Sets the files to upload alongside the embed. A file can be accessed via `attachment://fileName.extension` when
+   * setting an embed image or author/footer icons. Multiple files can be attached.
+   * @param {Array<FileOptions|string|Attachment>} files Files to attach
+   * @returns {RichEmbed}
+   */
+  attachFiles(files) {
+    files = files.map(file => file instanceof Attachment ? file.file : file);
+    this.files = this.files.concat(files);
+    return this;
+  }
+
+  /**
+   * The accumulated length for the embed title, description, fields, author and footer text
+   * @type {number}
+   * @readonly
+   */
+  get length() {
+    return (
+      (this.title ? this.title.length : 0) +
+      (this.description ? this.description.length : 0) +
+      (this.fields.length >= 1 ? this.fields.reduce((prev, curr) =>
+        prev + curr.name.length + curr.value.length, 0) : 0) +
+      (this.footer ? this.footer.text.length : 0) +
+      (this.author ? this.author.name.length : 0));
+  }
+
+  /**
+   * Transforms the embed to a plain object.
+   * @returns {Object} The raw data of this embed
+   */
+  toJSON() {
+    return {
+      title: this.title,
+      type: 'rich',
+      description: this.description,
+      url: this.url,
+      timestamp: this.timestamp ? new Date(this.timestamp) : null,
+      color: this.color,
+      fields: this.fields ?
+        this.fields.map(field => ({ name: field.name, value: field.value, inline: field.inline })) :
+        null,
+      thumbnail: this.thumbnail ? {
+        url: this.thumbnail.url,
+      } : null,
+      image: this.image ? {
+        url: this.image.url,
+      } : null,
+      author: this.author ? {
+        name: this.author.name,
+        url: this.author.url,
+        icon_url: this.author instanceof MessageEmbed.Author ? this.author.iconURL : this.author.icon_url,
+      } : null,
+      footer: this.footer ? {
+        text: this.footer.text,
+        icon_url: this.footer instanceof MessageEmbed.Footer ? this.footer.iconURL : this.footer.icon_url,
+      } : null,
+    };
+  }
+
+  /**
+   * Normalizes field input and resolves strings.
+   * @param {StringResolvable} name The name of the field
+   * @param {StringResolvable} value The value of the field
+   * @param {boolean} [inline=false] Set the field to display inline
+   * @returns {EmbedField}
+   */
+  static normalizeField(name, value, inline) { if(inline === undefined) inline = false;
+    name = util.resolveString(name);
+    if (name.length > 256) throw new RangeError('RichEmbed field names may not exceed 256 characters.');
+    if (!/\S/.test(name)) throw new RangeError('RichEmbed field names may not be empty.');
+    value = util.resolveString(value);
+    if (value.length > 1024) throw new RangeError('RichEmbed field values may not exceed 1024 characters.');
+    if (!/\S/.test(value)) throw new RangeError('RichEmbed field values may not be empty.');
+    return { name, value, inline };
   }
 }
 
 module.exports = RichEmbed;
-
-function resolveString(data) {
-  if (typeof data === 'string') return data;
-  if (data instanceof Array) return data.join('\n');
-  return String(data);
-}

@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const AbstractHandler = require('./AbstractHandler');
 const Constants = require('../../../../util/Constants');
@@ -13,7 +13,7 @@ class MessageCreateHandler extends AbstractHandler {
 }
 
 /**
- * Emitted whenever a message is created
+ * Emitted whenever a message is created.
  * @event Client#message
  * @param {Message} message The created message
  */

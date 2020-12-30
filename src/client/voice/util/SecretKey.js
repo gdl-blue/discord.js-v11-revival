@@ -1,7 +1,7 @@
-"use strict";
+'use strict';
 
 /**
- * Represents a Secret Key used in encryption over voice
+ * Represents a Secret Key used in encryption over voice.
  * @private
  */
 class SecretKey {
@@ -11,7 +11,7 @@ class SecretKey {
      * @type {Uint8Array}
      */
     this.key = new Uint8Array(new ArrayBuffer(key.length));
-    for (const index in key) this.key[index] = key[index];
+    for (const index of Object.keys(key)) this.key[index] = key[index];
   }
 }
 

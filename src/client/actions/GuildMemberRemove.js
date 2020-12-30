@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const Action = require('./Action');
 const Constants = require('../../util/Constants');
@@ -11,12 +11,12 @@ class GuildMemberRemoveAction extends Action {
 
   handle(data) {
     const client = this.client;
-
     const guild = client.guilds.get(data.guild_id);
+    let member = null;
     if (guild) {
-      let member = guild.members.get(data.user.id);
+      member = guild.members.get(data.user.id);
+      guild.memberCount--;
       if (member) {
-        guild.memberCount--;
         guild._removeMember(member);
         this.deleted.set(guild.id + data.user.id, member);
         if (client.status === Constants.Status.READY) client.emit(Constants.Events.GUILD_MEMBER_REMOVE, member);
@@ -24,17 +24,9 @@ class GuildMemberRemoveAction extends Action {
       } else {
         member = this.deleted.get(guild.id + data.user.id) || null;
       }
-
-      return {
-        guild,
-        member,
-      };
+      if (member) member.deleted = true;
     }
-
-    return {
-      guild,
-      member: null,
-    };
+    return { guild, member };
   }
 
   scheduleForDeletion(guildID, userID) {
@@ -45,7 +37,7 @@ class GuildMemberRemoveAction extends Action {
 /**
  * Emitted whenever a member leaves a guild, or is kicked.
  * @event Client#guildMemberRemove
- * @param {GuildMember} member The member that has left/been kicked from the guild.
+ * @param {GuildMember} member The member that has left/been kicked from the guild
  */
 
 module.exports = GuildMemberRemoveAction;

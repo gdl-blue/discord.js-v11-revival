@@ -1,15 +1,17 @@
-"use strict";
+'use strict';
 
 const Constants = require('../util/Constants');
 const Collection = require('../util/Collection');
+const Permissions = require('../util/Permissions');
+const Snowflake = require('../util/Snowflake');
 
 /**
- * Represents a custom emoji
+ * Represents a custom emoji.
  */
 class Emoji {
   constructor(guild, data) {
     /**
-     * The Client that instantiated this object
+     * The client that instantiated this object
      * @name Emoji#client
      * @type {Client}
      * @readonly
@@ -22,13 +24,19 @@ class Emoji {
      */
     this.guild = guild;
 
+    /**
+     * Whether this emoji has been deleted
+     * @type {boolean}
+     */
+    this.deleted = false;
+
     this.setup(data);
   }
 
   setup(data) {
     /**
      * The ID of the emoji
-     * @type {string}
+     * @type {Snowflake}
      */
     this.id = data.id;
 
@@ -49,8 +57,19 @@ class Emoji {
      * @type {boolean}
      */
     this.managed = data.managed;
-	
-	this.animated = data.animated;
+
+    /**
+     * Whether this emoji is animated
+     * @type {boolean}
+     */
+    this.animated = data.animated;
+
+    /**
+     * Whether this emoji is available
+     * @type {boolean}
+     * @name Emoji#available
+     */
+    if (typeof data.available !== 'undefined') this.available = data.available;
 
     this._roles = data.roles;
   }
@@ -61,7 +80,7 @@ class Emoji {
    * @readonly
    */
   get createdTimestamp() {
-    return (this.id / 4194304) + 1420070400000;
+    return Snowflake.deconstruct(this.id).timestamp;
   }
 
   /**
@@ -74,8 +93,17 @@ class Emoji {
   }
 
   /**
-   * A collection of roles this emoji is active for (empty if all), mapped by role ID.
-   * @type {Collection<string, Role>}
+   * Whether the emoji is deletable by the client user
+   * @type {boolean}
+   * @readonly
+   */
+  get deletable() {
+    return !this.managed && this.guild.me.hasPermission(Permissions.FLAGS.MANAGE_EMOJIS);
+  }
+
+  /**
+   * A collection of roles this emoji is active for (empty if all), mapped by role ID
+   * @type {Collection<Snowflake, Role>}
    * @readonly
    */
   get roles() {
@@ -92,20 +120,129 @@ class Emoji {
    * @readonly
    */
   get url() {
-	// https://github.com/discordjs/discord.js/commit/659e89e8cd350c0e3458383c14c6f22248e1d9ff
-    return Constants.Endpoints.emoji(this.id, this.animated ? 'gif' : 'png');
+    return Constants.Endpoints.CDN(this.client.options.http.cdn).Emoji(this.id, this.animated ? 'gif' : 'png');
+  }
+
+  /**
+   * The identifier of this emoji, used for message reactions
+   * @type {string}
+   * @readonly
+   */
+  get identifier() {
+    if (this.id) return `${this.name}:${this.id}`;
+    return encodeURIComponent(this.name);
+  }
+
+  /**
+   * Data for editing an emoji.
+   * @typedef {Object} EmojiEditData
+   * @property {string} [name] The name of the emoji
+   * @property {Collection<Snowflake, Role>|Array<Snowflake|Role>} [roles] Roles to restrict emoji to
+   */
+
+  /**
+   * Edits the emoji.
+   * @param {EmojiEditData} data The new data for the emoji
+   * @param {string} [reason] Reason for editing this emoji
+   * @returns {Promise<Emoji>}
+   * @example
+   * // Edit an emoji
+   * emoji.edit({name: 'newemoji'})
+   *   .then(e => console.log(`Edited emoji ${e}`))
+   *   .catch(console.error);
+   */
+  edit(data, reason) {
+    return this.client.rest.methods.updateEmoji(this, data, reason);
+  }
+
+  /**
+   * Set the name of the emoji.
+   * @param {string} name The new name for the emoji
+   * @param {string} [reason] The reason for changing the emoji's name
+   * @returns {Promise<Emoji>}
+   */
+  setName(name, reason) {
+    return this.edit({ name }, reason);
+  }
+
+  /**
+   * Fetches the author for this emoji
+   * @returns {Promise<User>}
+   */
+  fetchAuthor() {
+    if (this.managed) return Promise.reject(new Error('Emoji is managed and has no Author.'));
+    if (!this.guild.me.permissions.has(Permissions.FLAGS.MANAGE_EMOJIS)) {
+      return Promise.reject(
+        new Error(`Client must have Manage Emoji permission in guild ${this.guild} to see emoji authors.`)
+      );
+    }
+    return this.client.rest.makeRequest('get', Constants.Endpoints.Guild(this.guild).Emoji(this.id), true)
+      .then(emoji => this.client.dataManager.newUser(emoji.user));
+  }
+
+  /**
+   * Add a role to the list of roles that can use this emoji.
+   * @param {Role} role The role to add
+   * @returns {Promise<Emoji>}
+   */
+  addRestrictedRole(role) {
+    return this.addRestrictedRoles([role]);
+  }
+
+  /**
+   * Add multiple roles to the list of roles that can use this emoji.
+   * @param {Role[]} roles Roles to add
+   * @returns {Promise<Emoji>}
+   */
+  addRestrictedRoles(roles) {
+    const newRoles = new Collection(this.roles);
+    for (const role of roles) {
+      if (this.guild.roles.has(role.id)) newRoles.set(role.id, role);
+    }
+    return this.edit({ roles: newRoles });
+  }
+
+  /**
+   * Remove a role from the list of roles that can use this emoji.
+   * @param {Role} role The role to remove
+   * @returns {Promise<Emoji>}
+   */
+  removeRestrictedRole(role) {
+    return this.removeRestrictedRoles([role]);
+  }
+
+  /**
+   * Remove multiple roles from the list of roles that can use this emoji.
+   * @param {Role[]} roles Roles to remove
+   * @returns {Promise<Emoji>}
+   */
+  removeRestrictedRoles(roles) {
+    const newRoles = new Collection(this.roles);
+    for (const role of roles) {
+      if (newRoles.has(role.id)) newRoles.delete(role.id);
+    }
+    return this.edit({ roles: newRoles });
+  }
+
+
+  /**
+   * Deletes the emoji.
+   * @param {string} [reason] Reason for deleting the emoji
+   * @returns {Promise<Emoji>}
+   */
+  delete(reason) {
+    return this.client.rest.methods.deleteEmoji(this, reason);
   }
 
   /**
    * When concatenated with a string, this automatically returns the emoji mention rather than the object.
    * @returns {string}
    * @example
-   * // send an emoji:
+   * // Send an emoji:
    * const emoji = guild.emojis.first();
    * msg.reply(`Hello! ${emoji}`);
    */
   toString() {
-	// https://github.com/discordjs/discord.js/commit/659e89e8cd350c0e3458383c14c6f22248e1d9ff
     if (!this.id || !this.requiresColons) {
       return this.name;
     }
@@ -114,9 +251,9 @@ class Emoji {
   }
 
   /**
-   * Whether this emoji is the same as another one
-   * @param {Emoji|Object} other the emoji to compare it to
-   * @returns {boolean} whether the emoji is equal to the given emoji or not
+   * Whether this emoji is the same as another one.
+   * @param {Emoji|Object} other The emoji to compare it to
+   * @returns {boolean} Whether the emoji is equal to the given emoji or not
    */
   equals(other) {
     if (other instanceof Emoji) {
@@ -132,18 +269,6 @@ class Emoji {
         other.name === this.name
       );
     }
-  }
-
-  /**
-   * The identifier of this emoji, used for message reactions
-   * @readonly
-   * @type {string}
-   */
-  get identifier() {
-    if (this.id) {
-      return `${this.name}:${this.id}`;
-    }
-    return encodeURIComponent(this.name);
   }
 }
 

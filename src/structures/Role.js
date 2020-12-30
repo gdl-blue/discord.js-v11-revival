@@ -1,9 +1,11 @@
-"use strict";
+'use strict';
 
-const Constants = require('../util/Constants');
+const Snowflake = require('../util/Snowflake');
+const Permissions = require('../util/Permissions');
+const util = require('util');
 
 /**
- * Represents a role on Discord
+ * Represents a role on Discord.
  */
 class Role {
   constructor(guild, data) {
@@ -21,13 +23,19 @@ class Role {
      */
     this.guild = guild;
 
+    /**
+     * Whether the role has been deleted
+     * @type {boolean}
+     */
+    this.deleted = false;
+
     if (data) this.setup(data);
   }
 
   setup(data) {
     /**
      * The ID of the role (unique to the guild it is part of)
-     * @type {string}
+     * @type {Snowflake}
      */
     this.id = data.id;
 
@@ -50,13 +58,13 @@ class Role {
     this.hoist = data.hoist;
 
     /**
-     * The position of the role in the role manager
+     * The position of the role from the API
      * @type {number}
      */
     this.position = data.position;
 
     /**
-     * The evaluated permissions number
+     * The permissions bitfield of the role
      * @type {number}
      */
     this.permissions = data.permissions;
@@ -80,7 +88,7 @@ class Role {
    * @readonly
    */
   get createdTimestamp() {
-    return (this.id / 4194304) + 1420070400000;
+    return Snowflake.deconstruct(this.id).timestamp;
   }
 
   /**
@@ -93,7 +101,7 @@ class Role {
   }
 
   /**
-   * The hexadecimal version of the role color, with a leading hashtag.
+   * The hexadecimal version of the role color, with a leading hashtag
    * @type {string}
    * @readonly
    */
@@ -104,8 +112,8 @@ class Role {
   }
 
   /**
-   * The cached guild members that have this role.
-   * @type {Collection<string, GuildMember>}
+   * The cached guild members that have this role
+   * @type {Collection<Snowflake, GuildMember>}
    * @readonly
    */
   get members() {
@@ -113,191 +121,214 @@ class Role {
   }
 
   /**
-   * Whether the role is editable by the client user.
+   * Whether the role is editable by the client user
    * @type {boolean}
    * @readonly
    */
   get editable() {
     if (this.managed) return false;
     const clientMember = this.guild.member(this.client.user);
-    if (!clientMember.hasPermission(Constants.PermissionFlags.MANAGE_ROLES_OR_PERMISSIONS)) return false;
+    if (!clientMember.permissions.has(Permissions.FLAGS.MANAGE_ROLES_OR_PERMISSIONS)) return false;
     return clientMember.highestRole.comparePositionTo(this) > 0;
   }
 
   /**
-   * Get an object mapping permission names to whether or not the role enables that permission
+   * The position of the role in the role manager
+   * @type {number}
+   * @readonly
+   */
+  get calculatedPosition() {
+    const sorted = this.guild._sortedRoles;
+    return sorted.array().indexOf(sorted.get(this.id));
+  }
+
+  /**
+   * Get an object mapping permission names to whether or not the role enables that permission.
    * @returns {Object<string, boolean>}
    * @example
-   * // print the serialized role
+   * // Print the serialized role permissions
    * console.log(role.serialize());
    */
   serialize() {
-    const serializedPermissions = {};
-    for (const permissionName in Constants.PermissionFlags) {
-      serializedPermissions[permissionName] = this.hasPermission(permissionName);
-    }
-    return serializedPermissions;
+    return new Permissions(this.permissions).serialize();
   }
 
   /**
    * Checks if the role has a permission.
-   * @param {PermissionResolvable} permission The permission to check for
+   * @param {PermissionResolvable} permission Permission(s) to check for
    * @param {boolean} [explicit=false] Whether to require the role to explicitly have the exact permission
+   * **(deprecated)**
+   * @param {boolean} [checkAdmin] Whether to allow the administrator permission to override
+   * (takes priority over `explicit`)
    * @returns {boolean}
    * @example
-   * // see if a role can ban a member
+   * // See if a role can ban a member
    * if (role.hasPermission('BAN_MEMBERS')) {
    *   console.log('This role can ban members');
    * } else {
    *   console.log('This role can\'t ban members');
    * }
    */
-  hasPermission(permission, explicit) {
-    permission = this.client.resolver.resolvePermission(permission);
-    if (!explicit && (this.permissions & Constants.PermissionFlags.ADMINISTRATOR) > 0) return true;
-    return (this.permissions & permission) > 0;
+  hasPermission(permission, explicit, checkAdmin) {
+    return new Permissions(this.permissions).has(
+      permission, typeof checkAdmin !== 'undefined' ? checkAdmin : !explicit
+    );
   }
 
   /**
    * Checks if the role has all specified permissions.
-   * @param {PermissionResolvable[]} permissions The permissions to check for
+   * @param {PermissionResolvable} permissions The permissions to check for
    * @param {boolean} [explicit=false] Whether to require the role to explicitly have the exact permissions
    * @returns {boolean}
+   * @deprecated
    */
   hasPermissions(permissions, explicit) {
-    return permissions.every(p => this.hasPermission(p, explicit));
+    return new Permissions(this.permissions).has(permissions, !explicit);
   }
 
   /**
    * Compares this role's position to another role's.
    * @param {Role} role Role to compare to this one
-   * @returns {number} Negative number if the this role's position is lower (other role's is higher),
-   * positive number if the this one is higher (other's is lower), 0 if equal
+   * @returns {number} Negative number if this role's position is lower (other role's is higher),
+   * positive number if this one is higher (other's is lower), 0 if equal
    */
   comparePositionTo(role) {
     return this.constructor.comparePositions(this, role);
   }
 
   /**
-   * The data for a role
+   * The data for a role.
    * @typedef {Object} RoleData
    * @property {string} [name] The name of the role
-   * @property {number|string} [color] The color of the role, either a hex string or a base 10 number
+   * @property {ColorResolvable} [color] The color of the role, either a hex string or a base 10 number
    * @property {boolean} [hoist] Whether or not the role should be hoisted
    * @property {number} [position] The position of the role
-   * @property {string[]} [permissions] The permissions of the role
+   * @property {PermissionResolvable|number} [permissions] The permissions of the role
    * @property {boolean} [mentionable] Whether or not the role should be mentionable
    */
 
   /**
-   * Edits the role
+   * Edits the role.
    * @param {RoleData} data The new data for the role
+   * @param {string} [reason] The reason for editing this role
    * @returns {Promise<Role>}
    * @example
-   * // edit a role
-   * role.edit({name: 'new role'})
-   *  .then(r => console.log(`Edited role ${r}`))
-   *  .catch(console.error);
+   * // Edit name of a role
+   * role.edit({ name: 'New Name' })
+   *   .then(updated => console.log(`Edited role name from ${role.name} to ${updated.name}`))
+   *   .catch(console.error);
    */
-  edit(data) {
-    return this.client.rest.methods.updateGuildRole(this, data);
+  edit(data, reason) {
+    return this.client.rest.methods.updateGuildRole(this, data, reason);
   }
 
   /**
-   * Set a new name for the role
+   * Set a new name for the role.
    * @param {string} name The new name of the role
+   * @param {string} [reason] Reason for changing the role's name
    * @returns {Promise<Role>}
    * @example
-   * // set the name of the role
-   * role.setName('new role')
-   *  .then(r => console.log(`Edited name of role ${r}`))
-   *  .catch(console.error);
+   * // Set the name of the role
+   * role.setName('New Name')
+   *   .then(updated => console.log(`Edited role name from ${role.name} to ${updated.name}`))
+   *   .catch(console.error);
    */
-  setName(name) {
-    return this.edit({ name });
+  setName(name, reason) {
+    return this.edit({ name }, reason);
   }
 
   /**
-   * Set a new color for the role
-   * @param {number|string} color The new color for the role, either a hex string or a base 10 number
+   * Set a new color for the role.
+   * @param {ColorResolvable} color The color of the role
+   * @param {string} [reason] Reason for changing the role's color
    * @returns {Promise<Role>}
    * @example
-   * // set the color of a role
+   * // Set the color of a role
    * role.setColor('#FF0000')
-   *  .then(r => console.log(`Set color of role ${r}`))
-   *  .catch(console.error);
+   *   .then(updated => console.log(`Set color of role to ${role.color}`))
+   *   .catch(console.error);
    */
-  setColor(color) {
-    return this.edit({ color });
+  setColor(color, reason) {
+    return this.edit({ color }, reason);
   }
 
   /**
-   * Set whether or not the role should be hoisted
+   * Set whether or not the role should be hoisted.
    * @param {boolean} hoist Whether or not to hoist the role
+   * @param {string} [reason] Reason for setting whether or not the role should be hoisted
    * @returns {Promise<Role>}
    * @example
-   * // set the hoist of the role
+   * // Set the hoist of the role
    * role.setHoist(true)
-   *  .then(r => console.log(`Role hoisted: ${r.hoist}`))
-   *  .catch(console.error);
+   *   .then(updated => console.log(`Role hoisted: ${updated.hoist}`))
+   *   .catch(console.error);
    */
-  setHoist(hoist) {
-    return this.edit({ hoist });
+  setHoist(hoist, reason) {
+    return this.edit({ hoist }, reason);
   }
 
   /**
-   * Set the position of the role
+   * Set the position of the role.
    * @param {number} position The position of the role
+   * @param {boolean} [relative=false] Move the position relative to its current value
    * @returns {Promise<Role>}
    * @example
-   * // set the position of the role
+   * // Set the position of the role
    * role.setPosition(1)
-   *  .then(r => console.log(`Role position: ${r.position}`))
-   *  .catch(console.error);
+   *   .then(updated => console.log(`Role position: ${updated.position}`))
+   *   .catch(console.error);
    */
-  setPosition(position) {
-    return this.guild.setRolePosition(this, position).then(() => this);
+  setPosition(position, relative) {
+    return this.guild.setRolePosition(this, position, relative).then(() => this);
   }
 
   /**
-   * Set the permissions of the role
-   * @param {string[]} permissions The permissions of the role
+   * Set the permissions of the role.
+   * @param {PermissionResolvable} permissions The permissions of the role
+   * @param {string} [reason] Reason for changing the role's permissions
    * @returns {Promise<Role>}
    * @example
-   * // set the permissions of the role
+   * // Set the permissions of the role
    * role.setPermissions(['KICK_MEMBERS', 'BAN_MEMBERS'])
-   *  .then(r => console.log(`Role updated ${r}`))
-   *  .catch(console.error);
+   *   .then(updated => console.log(`Updated permissions to ${updated.permissions.bitfield}`))
+   *   .catch(console.error);
+   * @example
+   * // Remove all permissions from a role
+   * role.setPermissions(0)
+   *   .then(updated => console.log(`Updated permissions to ${updated.permissions.bitfield}`))
+   *   .catch(console.error);
    */
-  setPermissions(permissions) {
-    return this.edit({ permissions });
+  setPermissions(permissions, reason) {
+    return this.edit({ permissions }, reason);
   }
 
   /**
-   * Set whether this role is mentionable
+   * Set whether this role is mentionable.
    * @param {boolean} mentionable Whether this role should be mentionable
+   * @param {string} [reason] Reason for setting whether or not this role should be mentionable
    * @returns {Promise<Role>}
    * @example
-   * // make the role mentionable
-   * role.setMentionable(true)
-   *  .then(r => console.log(`Role updated ${r}`))
-   *  .catch(console.error);
+   * // Make the role mentionable
+   * role.setMentionable(true, 'Role needs to be pinged')
+   *   .then(updated => console.log(`Role mentionable: ${updated.mentionable}`))
+   *   .catch(console.error);
    */
-  setMentionable(mentionable) {
-    return this.edit({ mentionable });
+  setMentionable(mentionable, reason) {
+    return this.edit({ mentionable }, reason);
   }
 
   /**
-   * Deletes the role
+   * Deletes the role.
+   * @param {string} [reason] Reason for deleting the role
    * @returns {Promise<Role>}
    * @example
-   * // delete a role
-   * role.delete()
-   *  .then(r => console.log(`Deleted role ${r}`))
-   *  .catch(console.error);
+   * // Delete a role
+   * role.delete('The role needed to go')
+   *   .then(deleted => console.log(`Deleted role ${deleted.name}`))
+   *   .catch(console.error);
    */
-  delete() {
-    return this.client.rest.methods.deleteGuildRole(this);
+  delete(reason) {
+    return this.client.rest.methods.deleteGuildRole(this, reason);
   }
 
   /**
@@ -339,5 +370,9 @@ class Role {
     return role1.position - role2.position;
   }
 }
+
+Role.prototype.hasPermissions = util
+  .deprecate(Role.prototype.hasPermissions,
+    'Role#hasPermissions is deprecated - use Role#hasPermission instead, it now takes an array');
 
 module.exports = Role;

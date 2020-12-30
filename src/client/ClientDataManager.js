@@ -1,14 +1,17 @@
-"use strict";
+'use strict';
 
 const Constants = require('../util/Constants');
-const cloneObject = require('../util/CloneObject');
+const Util = require('../util/Util');
 const Guild = require('../structures/Guild');
 const User = require('../structures/User');
-const DMChannel = require('../structures/DMChannel');
 const Emoji = require('../structures/Emoji');
+const GuildChannel = require('../structures/GuildChannel');
 const TextChannel = require('../structures/TextChannel');
 const VoiceChannel = require('../structures/VoiceChannel');
-const GuildChannel = require('../structures/GuildChannel');
+const CategoryChannel = require('../structures/CategoryChannel');
+const NewsChannel = require('../structures/NewsChannel');
+const StoreChannel = require('../structures/StoreChannel');
+const DMChannel = require('../structures/DMChannel');
 const GroupDMChannel = require('../structures/GroupDMChannel');
 
 class ClientDataManager {
@@ -17,7 +20,7 @@ class ClientDataManager {
   }
 
   get pastReady() {
-    return this.client.ws.status === Constants.Status.READY;
+    return this.client.ws.connection.status === Constants.Status.READY;
   }
 
   newGuild(data) {
@@ -40,10 +43,10 @@ class ClientDataManager {
     return guild;
   }
 
-  newUser(data) {
+  newUser(data, cache) { if(cache===undefined)cache = true;
     if (this.client.users.has(data.id)) return this.client.users.get(data.id);
     const user = new User(this.client, data);
-    this.client.users.set(user.id, user);
+    if (cache) this.client.users.set(user.id, user);
     return user;
   }
 
@@ -52,24 +55,40 @@ class ClientDataManager {
     let channel;
     if (data.type === Constants.ChannelTypes.DM) {
       channel = new DMChannel(this.client, data);
-    } else if (data.type === Constants.ChannelTypes.groupDM) {
+    } else if (data.type === Constants.ChannelTypes.GROUP_DM) {
       channel = new GroupDMChannel(this.client, data);
     } else {
       guild = guild || this.client.guilds.get(data.guild_id);
-      if (guild) {
-        if (data.type === Constants.ChannelTypes.text) {
-          channel = new TextChannel(guild, data);
-          guild.channels.set(channel.id, channel);
-        } else if (data.type === Constants.ChannelTypes.voice) {
-          channel = new VoiceChannel(guild, data);
-          guild.channels.set(channel.id, channel);
+      if (already) {
+        channel = this.client.channels.get(data.id);
+      } else if (guild) {
+        switch (data.type) {
+          case Constants.ChannelTypes.TEXT:
+            channel = new TextChannel(guild, data);
+            break;
+          case Constants.ChannelTypes.VOICE:
+            channel = new VoiceChannel(guild, data);
+            break;
+          case Constants.ChannelTypes.CATEGORY:
+            channel = new CategoryChannel(guild, data);
+            break;
+          case Constants.ChannelTypes.NEWS:
+            channel = new NewsChannel(guild, data);
+            break;
+          case Constants.ChannelTypes.STORE:
+            channel = new StoreChannel(guild, data);
+            break;
         }
+
+        guild.channels.set(channel.id, channel);
       }
     }
 
-    if (channel) {
-      if (this.pastReady && !already) this.client.emit(Constants.Events.CHANNEL_CREATE, channel);
+    if (channel && !already) {
+      if (this.pastReady) this.client.emit(Constants.Events.CHANNEL_CREATE, channel);
       this.client.channels.set(channel.id, channel);
+      return channel;
+    } else if (already) {
       return channel;
     }
 
@@ -112,7 +131,7 @@ class ClientDataManager {
   }
 
   updateGuild(currentGuild, newData) {
-    const oldGuild = cloneObject(currentGuild);
+    const oldGuild = Util.cloneObject(currentGuild);
     currentGuild.setup(newData);
     if (this.pastReady) this.client.emit(Constants.Events.GUILD_UPDATE, oldGuild, currentGuild);
   }
@@ -122,9 +141,10 @@ class ClientDataManager {
   }
 
   updateEmoji(currentEmoji, newData) {
-    const oldEmoji = cloneObject(currentEmoji);
+    const oldEmoji = Util.cloneObject(currentEmoji);
     currentEmoji.setup(newData);
     this.client.emit(Constants.Events.GUILD_EMOJI_UPDATE, oldEmoji, currentEmoji);
+    return currentEmoji;
   }
 }
 

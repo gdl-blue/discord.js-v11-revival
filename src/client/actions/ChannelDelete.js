@@ -1,6 +1,7 @@
-"use strict";
+'use strict';
 
 const Action = require('./Action');
+const DMChannel = require('../../structures/DMChannel');
 
 class ChannelDeleteAction extends Action {
   constructor(client) {
@@ -19,10 +20,16 @@ class ChannelDeleteAction extends Action {
     } else {
       channel = this.deleted.get(data.id) || null;
     }
+    if (channel) {
+      if (channel.messages && !(channel instanceof DMChannel)) {
+        for (const message of channel.messages.values()) {
+          message.deleted = true;
+        }
+      }
+      channel.deleted = true;
+    }
 
-    return {
-      channel,
-    };
+    return { channel };
   }
 
   scheduleForDeletion(id) {

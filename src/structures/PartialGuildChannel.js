@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const Constants = require('../util/Constants');
 
@@ -12,7 +12,7 @@ const Constants = require('../util/Constants');
 class PartialGuildChannel {
   constructor(client, data) {
     /**
-     * The Client that instantiated this PartialGuildChannel
+     * The client that instantiated this PartialGuildChannel
      * @name PartialGuildChannel#client
      * @type {Client}
      * @readonly
@@ -25,7 +25,7 @@ class PartialGuildChannel {
   setup(data) {
     /**
      * The ID of this guild channel
-     * @type {string}
+     * @type {Snowflake}
      */
     this.id = data.id;
 
@@ -39,7 +39,7 @@ class PartialGuildChannel {
      * The type of this guild channel - `text` or `voice`
      * @type {string}
      */
-    this.type = Constants.ChannelTypes.text === data.type ? 'text' : 'voice';
+    this.type = Constants.ChannelTypes.TEXT === data.type ? 'text' : 'voice';
   }
 }
 

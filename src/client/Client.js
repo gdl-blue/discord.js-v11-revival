@@ -1,8 +1,9 @@
-"use strict";
+'use strict';
 
-const EventEmitter = require('events').EventEmitter;
-const mergeDefault = require('../util/MergeDefault');
+const EventEmitter = require('events');
 const Constants = require('../util/Constants');
+const Permissions = require('../util/Permissions');
+const Util = require('../util/Util');
 const RESTManager = require('./rest/RESTManager');
 const ClientDataManager = require('./ClientDataManager');
 const ClientManager = require('./ClientManager');
@@ -13,9 +14,10 @@ const ActionsManager = require('./actions/ActionsManager');
 const Collection = require('../util/Collection');
 const Presence = require('../structures/Presence').Presence;
 const ShardClientUtil = require('../sharding/ShardClientUtil');
+const VoiceBroadcast = require('./voice/VoiceBroadcast');
 
 /**
- * The starting point for making a Discord Bot.
+ * The main hub for interacting with the Discord API, and the starting point for any bot.
  * @extends {EventEmitter}
  */
 class Client extends EventEmitter {
@@ -33,7 +35,7 @@ class Client extends EventEmitter {
          * The options the client was instantiated with
          * @type {ClientOptions}
          */
-        this.options = mergeDefault(Constants.DefaultOptions, options);
+        this.options = Util.mergeDefault(Constants.DefaultOptions, options);
         this._validateOptions();
 
         /**
@@ -44,87 +46,87 @@ class Client extends EventEmitter {
         this.rest = new RESTManager(this);
 
         /**
-         * The data manager of the Client
+         * The data manager of the client
          * @type {ClientDataManager}
          * @private
          */
         this.dataManager = new ClientDataManager(this);
 
         /**
-         * The manager of the Client
+         * The manager of the client
          * @type {ClientManager}
          * @private
          */
         this.manager = new ClientManager(this);
 
         /**
-         * The WebSocket Manager of the Client
+         * The WebSocket manager of the client
          * @type {WebSocketManager}
          * @private
          */
         this.ws = new WebSocketManager(this);
 
         /**
-         * The Data Resolver of the Client
+         * The data resolver of the client
          * @type {ClientDataResolver}
          * @private
          */
         this.resolver = new ClientDataResolver(this);
 
         /**
-         * The Action Manager of the Client
+         * The action manager of the client
          * @type {ActionsManager}
          * @private
          */
         this.actions = new ActionsManager(this);
 
         /**
-         * The Voice Manager of the Client (`null` in browsers)
+         * The voice manager of the client (`null` in browsers)
          * @type {?ClientVoiceManager}
          * @private
          */
         this.voice = !this.browser ? new ClientVoiceManager(this) : null;
 
         /**
-         * The shard helpers for the client (only if the process was spawned as a child, such as from a ShardingManager)
+         * The shard helpers for the client
+         * (only if the process was spawned as a child, such as from a {@link ShardingManager})
          * @type {?ShardClientUtil}
          */
         this.shard = process.send ? ShardClientUtil.singleton(this) : null;
 
         /**
-         * A collection of the Client's stored users
-         * @type {Collection<string, User>}
+         * All of the {@link User} objects that have been cached at any point, mapped by their IDs
+         * @type {Collection<Snowflake, User>}
          */
         this.users = new Collection();
-		// v12 compatibility
-        this.users.cache = this.users;
 
         /**
-         * A collection of the Client's stored guilds
-         * @type {Collection<string, Guild>}
+         * All of the guilds the client is currently handling, mapped by their IDs -
+         * as long as sharding isn't being used, this will be *every* guild the bot is a member of
+         * @type {Collection<Snowflake, Guild>}
          */
         this.guilds = new Collection();
-		// v12 compatibility
-		this.guilds.cache = this.guilds;
 
         /**
-         * A collection of the Client's stored channels
-         * @type {Collection<string, Channel>}
+         * All of the {@link Channel}s that the client is currently handling, mapped by their IDs -
+         * as long as sharding isn't being used, this will be *every* channel in *every* guild, and all DM channels
+         * @type {Collection<Snowflake, Channel>}
          */
         this.channels = new Collection();
-		// v12 compatibility
-		this.channels.cache = this.channels;
 
         /**
-         * A collection of presences for friends of the logged in user.
+         * Presences that have been received for the client user's friends, mapped by user IDs
          * <warn>This is only filled when using a user account.</warn>
-         * @type {Collection<string, Presence>}
+         * @type {Collection<Snowflake, Presence>}
+         * @deprecated
          */
         this.presences = new Collection();
 
+        Object.defineProperty(this, 'token', { writable: true });
         if (!this.token && 'CLIENT_TOKEN' in process.env) {
             /**
-             * The authorization token for the logged in user/bot.
+             * Authorization token for the logged in user/bot
+             * <warn>This should be kept private at all times.</warn>
              * @type {?string}
              */
             this.token = process.env.CLIENT_TOKEN;
@@ -133,43 +135,73 @@ class Client extends EventEmitter {
         }
 
         /**
-         * The ClientUser representing the logged in Client
+         * User that the client is logged in as
          * @type {?ClientUser}
          */
         this.user = null;
 
         /**
-         * The date at which the Client was regarded as being in the `READY` state.
+         * Time at which the client was last regarded as being in the `READY` state
+         * (each time the client disconnects and successfully reconnects, this will be overwritten)
          * @type {?Date}
          */
         this.readyAt = null;
 
         /**
-         * The previous heartbeat pings of the websocket (most recent first, limited to three elements)
+         * Active voice broadcasts that have been created
+         * @type {VoiceBroadcast[]}
+         */
+        this.broadcasts = [];
+
+        /**
+         * Previous heartbeat pings of the websocket (most recent first, limited to three elements)
          * @type {number[]}
          */
         this.pings = [];
 
-        this._pingTimestamp = 0;
+        /**
+         * Timeouts set by {@link Client#setTimeout} that are still active
+         * @type {Set<Timeout>}
+         * @private
+         */
         this._timeouts = new Set();
+
+        /**
+         * Intervals set by {@link Client#setInterval} that are still active
+         * @type {Set<Timeout>}
+         * @private
+         */
         this._intervals = new Set();
 
         if (this.options.messageSweepInterval > 0) {
             this.setInterval(this.sweepMessages.bind(this), this.options.messageSweepInterval * 1000);
         }
     }
-
-    /**
-     * The status for the logged in Client.
-     * @type {?number}
-     * @readonly
-     */
-    get status() {
-        return this.ws.status;
+    
+    get servers() {
+	    return this.guilds;
     }
 
     /**
-     * The uptime for the logged in Client.
+     * Timestamp of the latest ping's start time
+     * @type {number}
+     * @private
+     */
+    get _pingTimestamp() {
+        return this.ws.connection ? this.ws.connection.lastPingTimestamp : 0;
+    }
+
+    /**
+     * Current status of the client's connection to Discord
+     * @type {Status}
+     * @readonly
+     */
+    get status() {
+        return this.ws.connection ? this.ws.connection.status : Constants.Status.IDLE;
+    }
+
+    /**
+     * How long it has been since the client last entered the `READY` state in milliseconds
      * @type {?number}
      * @readonly
      */
@@ -178,7 +210,7 @@ class Client extends EventEmitter {
     }
 
     /**
-     * The average heartbeat ping of the websocket
+     * Average heartbeat ping of the websocket, obtained by averaging the {@link Client#pings} property
      * @type {number}
      * @readonly
      */
@@ -187,8 +219,8 @@ class Client extends EventEmitter {
     }
 
     /**
-     * Returns a collection, mapping guild ID to voice connections.
-     * @type {Collection<string, VoiceConnection>}
+     * All active voice connections that have been established, mapped by guild ID
+     * @type {Collection<Snowflake, VoiceConnection>}
      * @readonly
      */
     get voiceConnections() {
@@ -197,8 +229,8 @@ class Client extends EventEmitter {
     }
 
     /**
-     * The emojis that the client can use. Mapped by emoji ID.
-     * @type {Collection<string, Emoji>}
+     * All custom emojis that the client has access to, mapped by their IDs
+     * @type {Collection<Snowflake, Emoji>}
      * @readonly
      */
     get emojis() {
@@ -210,7 +242,7 @@ class Client extends EventEmitter {
     }
 
     /**
-     * The timestamp that the client was last ready at
+     * Timestamp of the time the client was last `READY` at
      * @type {?number}
      * @readonly
      */
@@ -226,38 +258,40 @@ class Client extends EventEmitter {
     get browser() {
         return typeof window !== 'undefined';
     }
-	
-	get servers() {
-		return this.guilds;
-	}
 
     /**
-     * Logs the client in. If successful, resolves with the account's token. <warn>If you're making a bot, it's
-     * much better to use a bot account rather than a user account.
-     * Bot accounts have higher rate limits and have access to some features user accounts don't have. User bots
-     * that are making a lot of API requests can even be banned.</warn>
-     * @param    {string} token The token used for the account.
-     * @returns {Promise<string>}
+     * Creates a voice broadcast.
+     * @returns {VoiceBroadcast}
+     */
+    createVoiceBroadcast() {
+        const broadcast = new VoiceBroadcast(this);
+        this.broadcasts.push(broadcast);
+        return broadcast;
+    }
+
+    /**
+     * Logs the client in, establishing a websocket connection to Discord.
+     * <info>Both bot and regular user accounts are supported, but it is highly recommended to use a bot account whenever
+     * possible. User accounts are subject to harsher ratelimits and other restrictions that don't apply to bot accounts.
+     * Bot accounts also have access to many features that user accounts cannot utilise. Automating a user account is
+     * considered a violation of Discord's ToS.</info>
+     * @param {string} token Token of the account to log in with
+     * @returns {Promise<string>} Token of the account used
      * @example
-     * // log the client in using a token
-     * const token = 'my token';
-     * client.login(token);
-     * @example
-     * // log the client in using email and password
-     * const email = 'user@email.com';
-     * const password = 'supersecret123';
-     * client.login(email, password);
+     * client.login('my token')
+     *    .then(console.log)
+     *    .catch(console.error);
      */
     login(token) {
-        return this.rest.methods.login(token);
+        return this.rest.methods.login(token || this.token);
     }
-	
+    
     loginWithToken(token) {
-        return this.rest.methods.login(token);
+        return this.rest.methods.login(token || this.token);
     }
 
     /**
-     * Destroys the client and logs out.
+     * Logs out, terminates the connection to Discord, and destroys the client.
      * @returns {Promise}
      */
     destroy() {
@@ -269,10 +303,11 @@ class Client extends EventEmitter {
     }
 
     /**
-     * This shouldn't really be necessary to most developers as it is automatically invoked every 30 seconds, however
-     * if you wish to force a sync of guild data, you can use this.
+     * Requests a sync of guild data with Discord.
+     * <info>This can be done automatically every 30 seconds by enabling {@link ClientOptions#sync}.</info>
      * <warn>This is only available when using a user account.</warn>
-     * @param {Guild[]|Collection<string, Guild>} [guilds=this.guilds] An array or collection of guilds to sync
+     * @param {Guild[]|Collection<Snowflake, Guild>} [guilds=this.guilds] An array or collection of guilds to sync
+     * @deprecated
      */
     syncGuilds(guilds) { guilds = guilds || this.guilds;
         if (this.user.bot) return;
@@ -283,20 +318,25 @@ class Client extends EventEmitter {
     }
 
     /**
-     * Caches a user, or obtains it from the cache if it's already cached.
+     * Obtains a user from Discord, or the user cache if it's already available.
      * <warn>This is only available when using a bot account.</warn>
-     * @param {string} id The ID of the user to obtain
+     * @param {Snowflake} id ID of the user
+     * @param {boolean} [cache=true] Whether to cache the new user object if it isn't already
      * @returns {Promise<User>}
      */
-    fetchUser(id) {
+    fetchUser(id, cache) { if(cache === undefined) cache = true;
         if (this.users.has(id)) return Promise.resolve(this.users.get(id));
-        return this.rest.methods.getUser(id);
+        return this.rest.methods.getUser(id, cache);
     }
 
     /**
-     * Fetches an invite object from an invite code.
-     * @param {InviteResolvable} invite An invite code or URL
+     * Obtains an invite from Discord.
+     * @param {InviteResolvable} invite Invite code or URL
      * @returns {Promise<Invite>}
+     * @example
+     * client.fetchInvite('https://discord.gg/bRCvFy9')
+     *     .then(invite => console.log(`Obtained invite with code: ${invite.code}`))
+     *     .catch(console.error);
      */
     fetchInvite(invite) {
         const code = this.resolver.resolveInviteCode(invite);
@@ -304,24 +344,40 @@ class Client extends EventEmitter {
     }
 
     /**
-     * Fetch a webhook by ID.
-     * @param {string} id ID of the webhook
+     * Obtains a webhook from Discord.
+     * @param {Snowflake} id ID of the webhook
      * @param {string} [token] Token for the webhook
      * @returns {Promise<Webhook>}
+     * @example
+     * client.fetchWebhook('id', 'token')
+     *     .then(webhook => console.log(`Obtained webhook with name: ${webhook.name}`))
+     *     .catch(console.error);
      */
     fetchWebhook(id, token) {
         return this.rest.methods.getWebhook(id, token);
     }
 
     /**
-     * Sweeps all channels' messages and removes the ones older than the max message lifetime.
+     * Obtains the available voice regions from Discord.
+     * @returns {Promise<Collection<string, VoiceRegion>>}
+     * @example
+     * client.fetchVoiceRegions()
+     *     .then(regions => console.log(`Available regions are: ${regions.map(region => region.name).join(', ')}`))
+     *     .catch(console.error);
+     */
+    fetchVoiceRegions() {
+        return this.rest.methods.fetchVoiceRegions();
+    }
+
+    /**
+     * Sweeps all text-based channels' messages and removes the ones older than the max message lifetime.
      * If the message has been edited, the time of the edit is used rather than the time of the original message.
      * @param {number} [lifetime=this.options.messageCacheLifetime] Messages that are older than this (in seconds)
-     * will be removed from the caches. The default is based on the client's `messageCacheLifetime` option.
+     * will be removed from the caches. The default is based on {@link ClientOptions#messageCacheLifetime}
      * @returns {number} Amount of messages that were removed from the caches,
      * or -1 if the message cache lifetime is unlimited
      */
-    sweepMessages(lifetime) { lifetime = lifetime || this.options.messageCacheLifetime;
+    sweepMessages(lifetime) { lifetime=lifetime||this.options.messageCacheLifetime;
         if (typeof lifetime !== 'number' || isNaN(lifetime)) throw new TypeError('The lifetime must be a number.');
         if (lifetime <= 0) {
             this.emit('debug', 'Didn\'t sweep messages - lifetime is unlimited');
@@ -337,12 +393,9 @@ class Client extends EventEmitter {
             if (!channel.messages) continue;
             channels++;
 
-            for (const message of channel.messages.values()) {
-                if (now - (message.editedTimestamp || message.createdTimestamp) > lifetimeMs) {
-                    channel.messages.delete(message.id);
-                    messages++;
-                }
-            }
+            messages += channel.messages.sweep(
+                message => now - (message.editedTimestamp || message.createdTimestamp) > lifetimeMs
+            );
         }
 
         this.emit('debug', `Swept ${messages} messages older than ${lifetime} seconds in ${channels} text-based channels`);
@@ -350,98 +403,38 @@ class Client extends EventEmitter {
     }
 
     /**
-     * Gets the bot's OAuth2 application.
-     * <warn>This is only available when using a bot account.</warn>
-     * @returns {Promise<ClientOAuth2Application>}
+     * Obtains the OAuth Application of the bot from Discord.
+     * <warn>Bots can only fetch their own profile.</warn>
+     * @param {Snowflake} [id='@me'] ID of application to fetch
+     * @returns {Promise<OAuth2Application>}
+     * @example
+     * client.fetchApplication()
+     *     .then(application => console.log(`Obtained application with name: ${application.name}`))
+     *     .catch(console.error);
      */
-    fetchApplication() {
-        if (!this.user.bot) throw new Error(Constants.Errors.NO_BOT_ACCOUNT);
-        return this.rest.methods.getMyApplication();
+    fetchApplication(id) { id=id||'@me';
+        if (id !== '@me') process.emitWarning('fetchApplication: use "@me" as an argument', 'DeprecationWarning');
+        return this.rest.methods.getApplication(id);
     }
 
     /**
-     * Generate an invite link for your bot
-     * @param {PermissionResolvable[]|number} [permissions] An array of permissions to request
-     * @returns {Promise<string>} The invite link
+     * Generates a link that can be used to invite the bot to a guild.
+     * <warn>This is only available when using a bot account.</warn>
+     * @param {PermissionResolvable} [permissions] Permissions to request
+     * @returns {Promise<string>}
      * @example
      * client.generateInvite(['SEND_MESSAGES', 'MANAGE_GUILD', 'MENTION_EVERYONE'])
-     *     .then(link => {
-     *         console.log(`Generated bot invite link: ${link}`);
-     *     });
+     *     .then(link => console.log(`Generated bot invite link: ${link}`))
+     *     .catch(console.error);
      */
     generateInvite(permissions) {
-        if (permissions) {
-            if (permissions instanceof Array) permissions = this.resolver.resolvePermissions(permissions);
-        } else {
-            permissions = 0;
-        }
+        permissions = Permissions.resolve(permissions);
         return this.fetchApplication().then(application =>
-            `https://discordapp.com/oauth2/authorize?client_id=${application.id}&permissions=${permissions}&scope=bot`
+            `https://discord.com/oauth2/authorize?client_id=${application.id}&permissions=${permissions}&scope=bot`
         );
     }
-
-    /**
-     * Sets a timeout that will be automatically cancelled if the client is destroyed.
-     * @param {Function} fn Function to execute
-     * @param {number} delay Time to wait before executing (in milliseconds)
-     * @param {...*} args Arguments for the function
-     * @returns {Timeout}
-     */
-    setTimeout(fn$jscomp$0, delay$jscomp$0) {
-	  var _this$jscomp$0 = this;
-	  var _len$jscomp$0 = arguments.length;
-	  var args$jscomp$0 = Array(_len$jscomp$0 > 2 ? _len$jscomp$0 - 2 : 0);
-	  var _key$jscomp$0 = 2;
-	  for (; _key$jscomp$0 < _len$jscomp$0; _key$jscomp$0++) {
-		args$jscomp$0[_key$jscomp$0 - 2] = arguments[_key$jscomp$0];
-	  }
-	  var timeout$jscomp$1 = setTimeout.apply(undefined, [function() {
-		fn$jscomp$0();
-		_this$jscomp$0._timeouts.delete(timeout$jscomp$1);
-	  }, delay$jscomp$0].concat(args$jscomp$0));
-	  this._timeouts.add(timeout$jscomp$1);
-	  return timeout$jscomp$1;
-	}
-
-    /**
-     * Clears a timeout
-     * @param {Timeout} timeout Timeout to cancel
-     */
-    clearTimeout(timeout) {
-        clearTimeout(timeout);
-        this._timeouts.delete(timeout);
-    }
-
-    /**
-     * Sets an interval that will be automatically cancelled if the client is destroyed.
-     * @param {Function} fn Function to execute
-     * @param {number} delay Time to wait before executing (in milliseconds)
-     * @param {...*} args Arguments for the function
-     * @returns {Timeout}
-     */
-    setInterval(fn$jscomp$0, delay$jscomp$0) {
-	  var _len$jscomp$0 = arguments.length;
-	  var args$jscomp$0 = Array(_len$jscomp$0 > 2 ? _len$jscomp$0 - 2 : 0);
-	  var _key$jscomp$0 = 2;
-	  for (; _key$jscomp$0 < _len$jscomp$0; _key$jscomp$0++) {
-		args$jscomp$0[_key$jscomp$0 - 2] = arguments[_key$jscomp$0];
-	  }
-	  var interval$jscomp$0 = setInterval.apply(undefined, [fn$jscomp$0, delay$jscomp$0].concat(args$jscomp$0));
-	  this._intervals.add(interval$jscomp$0);
-	  return interval$jscomp$0;
-	}
-
-    /**
-     * Clears an interval
-     * @param {Timeout} interval Interval to cancel
-     */
-    clearInterval(interval) {
-        clearInterval(interval);
-        this._intervals.delete(interval);
-    }
 	
-	// Like DJS v8
-    startTyping(channel, count) {
+	startTyping(channel, count) {
         if (typeof count !== 'undefined' && count < 1) throw new RangeError('Count must be at least 1.');
         if (!this.user._typing.has(channel.id)) {
             this.user._typing.set(channel.id, {
@@ -468,25 +461,109 @@ class Client extends EventEmitter {
         }
     }
 
+    /**
+     * Sets a timeout that will be automatically cancelled if the client is destroyed.
+     * @param {Function} fn Function to execute
+     * @param {number} delay Time to wait before executing (in milliseconds)
+     * @param {...*} args Arguments for the function
+     * @returns {Timeout}
+     */
+	setTimeout(action, interval) {
+		var _len = arguments.length;
+		var args = Array(_len > 2 ? _len - 2 : 0);
+		var _key = 2;
+		for (; _key < _len; _key++) {
+			args[_key - 2] = arguments[_key];
+		}
+		var self = this;
+		var i = setTimeout(function() {
+			action.apply(undefined, args);
+			self._timeouts.delete(i);
+		}, interval);
+		this._timeouts.add(i);
+		return i;
+	}
+
+    /**
+     * Clears a timeout.
+     * @param {Timeout} timeout Timeout to cancel
+     */
+    clearTimeout(timeout) {
+        clearTimeout(timeout);
+        this._timeouts.delete(timeout);
+    }
+
+    /**
+     * Sets an interval that will be automatically cancelled if the client is destroyed.
+     * @param {Function} fn Function to execute
+     * @param {number} delay Time to wait before executing (in milliseconds)
+     * @param {...*} args Arguments for the function
+     * @returns {Timeout}
+     */
+    setInterval(fn, timeout) {
+	  var _len = arguments.length;
+	  var constructorArgs = Array(_len > 2 ? _len - 2 : 0);
+	  var _key = 2;
+	  for (; _key < _len; _key++) {
+		constructorArgs[_key - 2] = arguments[_key];
+	  }
+	  var id = setInterval.apply(undefined, [fn, timeout].concat(constructorArgs));
+	  this._intervals.add(id);
+	  return id;
+	}
+
+    /**
+     * Clears an interval.
+     * @param {Timeout} interval Interval to cancel
+     */
+    clearInterval(interval) {
+        clearInterval(interval);
+        this._intervals.delete(interval);
+    }
+
+    /**
+     * Adds a ping to {@link Client#pings}.
+     * @param {number} startTime Starting time of the ping
+     * @private
+     */
     _pong(startTime) {
         this.pings.unshift(Date.now() - startTime);
         if (this.pings.length > 3) this.pings.length = 3;
         this.ws.lastHeartbeatAck = true;
     }
 
+    /**
+     * Adds/updates a friend's presence in {@link Client#presences}.
+     * @param {Snowflake} id ID of the user
+     * @param {Object} presence Raw presence object from Discord
+     * @private
+     */
     _setPresence(id, presence) {
-        if (this.presences.get(id)) {
+        if (this.presences.has(id)) {
             this.presences.get(id).update(presence);
             return;
         }
-        this.presences.set(id, new Presence(presence));
+        this.presences.set(id, new Presence(presence, this));
     }
 
+    /**
+     * Calls {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval} on a script
+     * with the client as `this`.
+     * @param {string} script Script to eval
+     * @returns {*}
+     * @private
+     */
     _eval(script) {
         return eval(script);
     }
 
-    _validateOptions(options) { options = options || this.options;
+    /**
+     * Validates the client options.
+     * @param {ClientOptions} [options=this.options] Options to validate
+     * @private
+     */
+    _validateOptions(options) { // eslint-disable-line complexity
+		options=options||this.options;
         if (typeof options.shardCount !== 'number' || isNaN(options.shardCount)) {
             throw new TypeError('The shardCount option must be a number.');
         }
@@ -517,19 +594,22 @@ class Client extends EventEmitter {
             throw new TypeError('The restWsBridgeTimeout option must be a number.');
         }
         if (!(options.disabledEvents instanceof Array)) throw new TypeError('The disabledEvents option must be an Array.');
+        if (typeof options.retryLimit !== 'number' || isNaN(options.retryLimit)) {
+            throw new TypeError('The retryLimit    options must be a number.');
+        }
     }
 }
 
 module.exports = Client;
 
 /**
- * Emitted for general warnings
+ * Emitted for general warnings.
  * @event Client#warn
  * @param {string} info The warning
  */
 
 /**
- * Emitted for general debugging information
+ * Emitted for general debugging information.
  * @event Client#debug
  * @param {string} info The debug information
  */

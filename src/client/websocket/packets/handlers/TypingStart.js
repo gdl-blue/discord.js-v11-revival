@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const AbstractHandler = require('./AbstractHandler');
 const Constants = require('../../../../util/Constants');
@@ -57,14 +57,14 @@ function tooLate(channel, user) {
 }
 
 /**
- * Emitted whenever a user starts typing in a channel
+ * Emitted whenever a user starts typing in a channel.
  * @event Client#typingStart
  * @param {Channel} channel The channel the user started typing in
  * @param {User} user The user that started typing
  */
 
 /**
- * Emitted whenever a user stops typing in a channel
+ * Emitted whenever a user stops typing in a channel.
  * @event Client#typingStop
  * @param {Channel} channel The channel the user stopped typing in
  * @param {User} user The user that stopped typing

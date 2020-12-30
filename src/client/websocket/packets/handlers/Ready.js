@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const AbstractHandler = require('./AbstractHandler');
 
@@ -11,12 +11,15 @@ class ReadyHandler extends AbstractHandler {
 
     client.ws.heartbeat();
 
+    data.user.user_settings = data.user_settings;
+    data.user.user_guild_settings = data.user_guild_settings;
+
     const clientUser = new ClientUser(client, data.user);
     client.user = clientUser;
     client.readyAt = new Date();
     client.users.set(clientUser.id, clientUser);
 
-    for (const guild of data.guilds) client.dataManager.newGuild(guild);
+    for (const guild of data.guilds) if (!client.guilds.has(guild.id)) client.dataManager.newGuild(guild);
     for (const privateDM of data.private_channels) client.dataManager.newChannel(privateDM);
 
     for (const relation of data.relationships) {
@@ -35,7 +38,7 @@ class ReadyHandler extends AbstractHandler {
     }
 
     if (data.notes) {
-      for (const user in data.notes) {
+      for (const user of Object.keys(data.notes)) {
         let note = data.notes[user];
         if (!note.length) note = null;
 
@@ -44,14 +47,13 @@ class ReadyHandler extends AbstractHandler {
     }
 
     if (!client.user.bot && client.options.sync) client.setInterval(client.syncGuilds.bind(client), 30000);
-    client.once('ready', client.syncGuilds.bind(client));
 
     if (!client.users.has('1')) {
       client.dataManager.newUser({
         id: '1',
         username: 'Clyde',
         discriminator: '0000',
-        avatar: 'https://discordapp.com/assets/f78426a064bc9dd24847519259bc42af.png',
+        avatar: 'https://discord.com/assets/f78426a064bc9dd24847519259bc42af.png',
         bot: true,
         status: 'online',
         game: null,
@@ -59,12 +61,25 @@ class ReadyHandler extends AbstractHandler {
       });
     }
 
-    client.setTimeout(() => {
-      if (!client.ws.normalReady) client.ws._emitReady(false);
+    const t = client.setTimeout(() => {
+      client.ws.connection.triggerReady();
     }, 1200 * data.guilds.length);
 
-    this.packetManager.ws.sessionID = data.session_id;
-    this.packetManager.ws.checkIfReady();
+    const guildCount = data.guilds.length;
+
+    if (client.getMaxListeners() !== 0) client.setMaxListeners(client.getMaxListeners() + guildCount);
+
+    client.once('ready', () => {
+      client.syncGuilds();
+      if (client.getMaxListeners() !== 0) client.setMaxListeners(client.getMaxListeners() - guildCount);
+      client.clearTimeout(t);
+    });
+
+    const ws = this.packetManager.ws;
+
+    ws.sessionID = data.session_id;
+    client.emit('debug', `READY ${ws.sessionID}`);
+    ws.checkIfReady();
   }
 }
 

@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const Action = require('./Action');
 const Constants = require('../../util/Constants');

@@ -1,19 +1,21 @@
-"use strict";
+'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-const NaCl = require('tweetnacl');
+const secretbox = require('../util/Secretbox');
 const Readable = require('./VoiceReadable');
+const OpusEncoders = require('../opus/OpusEngineList');
 
-const nonce = new Buffer(24);
+const nonce = Buffer.alloc(24);
 nonce.fill(0);
 
 /**
  * Receives voice data from a voice connection.
  * ```js
- * // obtained using:
- * voiceChannel.join().then(connection => {
- *  const receiver = connection.createReceiver();
- * });
+ * // Obtained using:
+ * voiceChannel.join()
+ *   .then(connection => {
+ *     const receiver = connection.createReceiver();
+ *   });
  * ```
  * @extends {EventEmitter}
  */
@@ -21,15 +23,16 @@ class VoiceReceiver extends EventEmitter {
   constructor(connection) {
     super();
     /*
-      need a queue because we don't get the ssrc of the user speaking until after the first few packets,
-      so we queue up unknown SSRCs until they become known, then empty the queue.
+      Need a queue because we don't get the ssrc of the user speaking until after the first few packets,
+      so we queue up unknown SSRCs until they become known, then empty the queue
     */
     this.queues = new Map();
     this.pcmStreams = new Map();
     this.opusStreams = new Map();
+    this.opusEncoders = new Map();
 
     /**
-     * Whether or not this receiver has been destroyed.
+     * Whether or not this receiver has been destroyed
      * @type {boolean}
      */
     this.destroyed = false;
@@ -42,7 +45,7 @@ class VoiceReceiver extends EventEmitter {
 
     this._listener = msg => {
       const ssrc = +msg.readUInt32BE(8).toString(10);
-      const user = this.voiceConnection.ssrcMap.get(ssrc);
+      const user = connection.client.users.get(connection.ssrcMap.get(ssrc));
       if (!user) {
         if (!this.queues.has(ssrc)) this.queues.set(ssrc, []);
         this.queues.get(ssrc).push(msg);
@@ -68,7 +71,6 @@ class VoiceReceiver extends EventEmitter {
     if (!this.destroyed) return;
     this.voiceConnection.sockets.udp.socket.on('message', this._listener);
     this.destroyed = false;
-    return;
   }
 
   /**
@@ -76,15 +78,47 @@ class VoiceReceiver extends EventEmitter {
    */
   destroy() {
     this.voiceConnection.sockets.udp.socket.removeListener('message', this._listener);
-    for (const stream of this.pcmStreams) {
-      stream[1]._push(null);
-      this.pcmStreams.delete(stream[0]);
+    for (const _arr of this.pcmStreams) {
+      const id = _arr[0], stream = _arr[1];
+      stream._push(null);
+      this.pcmStreams.delete(id);
     }
-    for (const stream of this.opusStreams) {
-      stream[1]._push(null);
-      this.opusStreams.delete(stream[0]);
+    for (const _arr of this.opusStreams) {
+      const id = _arr[0], stream = _arr[1];
+      stream._push(null);
+      this.opusStreams.delete(id);
+    }
+    for (const _arr of this.opusEncoders) {
+      const id = _arr[0], encoder = _arr[1];
+      encoder.destroy();
+      this.opusEncoders.delete(id);
     }
     this.destroyed = true;
+  }
+
+  /**
+   * Invoked when a user stops speaking.
+   * @param {User} user The user that stopped speaking
+   * @private
+   */
+  stoppedSpeaking(user) {
+    const opusStream = this.opusStreams.get(user.id);
+    const pcmStream = this.pcmStreams.get(user.id);
+    const opusEncoder = this.opusEncoders.get(user.id);
+    if (opusStream) {
+      opusStream.push(null);
+      opusStream.open = false;
+      this.opusStreams.delete(user.id);
+    }
+    if (pcmStream) {
+      pcmStream.push(null);
+      pcmStream.open = false;
+      this.pcmStreams.delete(user.id);
+    }
+    if (opusEncoder) {
+      opusEncoder.destroy();
+      this.opusEncoders.delete(user.id);
+    }
   }
 
   /**
@@ -104,7 +138,7 @@ class VoiceReceiver extends EventEmitter {
 
   /**
    * Creates a readable stream for a user that provides PCM data while the user is speaking. When the user
-   * stops speaking, the stream is destroyed. The stream is 32-bit signed stereo PCM at 48KHz.
+   * stops speaking, the stream is destroyed. The stream is 16-bit signed stereo PCM at 48KHz.
    * @param {UserResolvable} user The user to create the stream for
    * @returns {ReadableStream}
    */
@@ -119,17 +153,39 @@ class VoiceReceiver extends EventEmitter {
 
   handlePacket(msg, user) {
     msg.copy(nonce, 0, 0, 12);
-    let data = NaCl.secretbox.open(msg.slice(12), nonce, this.voiceConnection.authentication.secretKey.key);
+    let data = secretbox.methods.open(msg.slice(12), nonce, this.voiceConnection.authentication.secretKey.key);
     if (!data) {
       /**
-       * Emitted whenever a voice packet cannot be decrypted
+       * Emitted whenever a voice packet experiences a problem.
        * @event VoiceReceiver#warn
+       * @param {string} reason The reason for the warning. If it happened because the voice packet could not be
+       * decrypted, this would be `decrypt`. If it happened because the voice packet could not be decoded into
+       * PCM, this would be `decode`
        * @param {string} message The warning message
        */
-      this.emit('warn', 'Failed to decrypt voice packet');
+      this.emit('warn', 'decrypt', 'Failed to decrypt voice packet');
       return;
     }
-    data = new Buffer(data);
+    data = Buffer.from(data);
+
+    // Strip RTP Header Extensions (one-byte only)
+    if (data[0] === 0xBE && data[1] === 0xDE && data.length > 4) {
+      const headerExtensionLength = data.readUInt16BE(2);
+      let offset = 4;
+      for (let i = 0; i < headerExtensionLength; i++) {
+        const byte = data[offset];
+        offset++;
+        if (byte === 0) {
+          continue;
+        }
+        offset += 1 + (0b1111 & (byte >> 4));
+      }
+      // Skip over undocumented Discord byte
+      offset++;
+
+      data = data.slice(offset);
+    }
+
     if (this.opusStreams.get(user.id)) this.opusStreams.get(user.id)._push(data);
     /**
      * Emitted whenever voice data is received from the voice connection. This is _always_ emitted (unlike PCM).
@@ -139,6 +195,17 @@ class VoiceReceiver extends EventEmitter {
      */
     this.emit('opus', user, data);
     if (this.listenerCount('pcm') > 0 || this.pcmStreams.size > 0) {
+      if (!this.opusEncoders.get(user.id)) this.opusEncoders.set(user.id, OpusEncoders.fetch());
+      const _obj = VoiceReceiver._tryDecode(this.opusEncoders.get(user.id), data);
+      var _obj2 = _obj;
+		var pcm = _obj2.pcm;
+		var error = _obj2.error;
+
+	  if (error) {
+        this.emit('warn', 'decode', `Failed to decode packet voice to PCM because: ${error.message}`);
+        return;
+      }
+      if (this.pcmStreams.get(user.id)) this.pcmStreams.get(user.id)._push(pcm);
       /**
        * Emits decoded voice data when it's received. For performance reasons, the decoding will only
        * happen if there is at least one `pcm` listener on this receiver.
@@ -146,9 +213,15 @@ class VoiceReceiver extends EventEmitter {
        * @param {User} user The user that is sending the buffer (is speaking)
        * @param {Buffer} buffer The decoded buffer
        */
-      const pcm = this.voiceConnection.player.opusEncoder.decode(data);
-      if (this.pcmStreams.get(user.id)) this.pcmStreams.get(user.id)._push(pcm);
       this.emit('pcm', user, pcm);
+    }
+  }
+
+  static _tryDecode(encoder, data) {
+    try {
+      return { pcm: encoder.decode(data) };
+    } catch (error) {
+      return { error };
     }
   }
 }

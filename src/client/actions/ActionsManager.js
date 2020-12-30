@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 class ActionsManager {
   constructor(client) {
@@ -10,6 +10,7 @@ class ActionsManager {
     this.register(require('./MessageUpdate'));
     this.register(require('./MessageReactionAdd'));
     this.register(require('./MessageReactionRemove'));
+    this.register(require('./MessageReactionRemoveEmoji'));
     this.register(require('./MessageReactionRemoveAll'));
     this.register(require('./ChannelCreate'));
     this.register(require('./ChannelDelete'));
@@ -22,6 +23,8 @@ class ActionsManager {
     this.register(require('./GuildRoleCreate'));
     this.register(require('./GuildRoleDelete'));
     this.register(require('./GuildRoleUpdate'));
+    this.register(require('./InviteCreate'));
+    this.register(require('./InviteDelete'));
     this.register(require('./UserGet'));
     this.register(require('./UserUpdate'));
     this.register(require('./UserNoteUpdate'));
@@ -29,7 +32,9 @@ class ActionsManager {
     this.register(require('./GuildEmojiCreate'));
     this.register(require('./GuildEmojiDelete'));
     this.register(require('./GuildEmojiUpdate'));
+    this.register(require('./GuildEmojisUpdate'));
     this.register(require('./GuildRolesPositionUpdate'));
+    this.register(require('./GuildChannelsPositionUpdate'));
   }
 
   register(Action) {

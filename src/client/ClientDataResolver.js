@@ -1,11 +1,11 @@
-"use strict";
+'use strict';
 
 const path = require('path');
 const fs = require('fs');
-const request = require('superagent');
+const superagent = require('superagent');
 
 const Constants = require('../util/Constants');
-const convertArrayBuffer = require('../util/ConvertArrayBuffer');
+const convertToBuffer = require('../util/Util').convertToBuffer;
 const User = require('../structures/User');
 const Message = require('../structures/Message');
 const Guild = require('../structures/Guild');
@@ -13,6 +13,7 @@ const Channel = require('../structures/Channel');
 const GuildMember = require('../structures/GuildMember');
 const Emoji = require('../structures/Emoji');
 const ReactionEmoji = require('../structures/ReactionEmoji');
+const Role = require('../structures/Role');
 
 /**
  * The DataResolver identifies different objects and tries to resolve a specific piece of information from them, e.g.
@@ -30,15 +31,15 @@ class ClientDataResolver {
   /**
    * Data that resolves to give a User object. This can be:
    * * A User object
-   * * A user ID
+   * * A Snowflake
    * * A Message object (resolves to the message author)
    * * A Guild object (owner of the guild)
    * * A GuildMember object
-   * @typedef {User|string|Message|Guild|GuildMember} UserResolvable
+   * @typedef {User|Snowflake|Message|Guild|GuildMember} UserResolvable
    */
 
   /**
-   * Resolves a UserResolvable to a User object
+   * Resolves a UserResolvable to a User object.
    * @param {UserResolvable} user The UserResolvable to identify
    * @returns {?User}
    */
@@ -47,14 +48,14 @@ class ClientDataResolver {
     if (typeof user === 'string') return this.client.users.get(user) || null;
     if (user instanceof GuildMember) return user.user;
     if (user instanceof Message) return user.author;
-    if (user instanceof Guild) return user.owner;
+    if (user instanceof Guild) return this.resolveUser(user.ownerID);
     return null;
   }
 
   /**
-   * Resolves a UserResolvable to a user ID string
+   * Resolves a UserResolvable to a user ID string.
    * @param {UserResolvable} user The UserResolvable to identify
-   * @returns {?string}
+   * @returns {?Snowflake}
    */
   resolveUserID(user) {
     if (user instanceof User || user instanceof GuildMember) return user.id;
@@ -67,12 +68,12 @@ class ClientDataResolver {
   /**
    * Data that resolves to give a Guild object. This can be:
    * * A Guild object
-   * * A Guild ID
-   * @typedef {Guild|string} GuildResolvable
+   * * A Snowflake
+   * @typedef {Guild|Snowflake} GuildResolvable
    */
 
   /**
-   * Resolves a GuildResolvable to a Guild object
+   * Resolves a GuildResolvable to a Guild object.
    * @param {GuildResolvable} guild The GuildResolvable to identify
    * @returns {?Guild}
    */
@@ -86,11 +87,11 @@ class ClientDataResolver {
    * Data that resolves to give a GuildMember object. This can be:
    * * A GuildMember object
    * * A User object
-   * @typedef {Guild} GuildMemberResolvable
+   * @typedef {GuildMember|User} GuildMemberResolvable
    */
 
   /**
-   * Resolves a GuildMemberResolvable to a GuildMember object
+   * Resolves a GuildMemberResolvable to a GuildMember object.
    * @param {GuildResolvable} guild The guild that the member is part of
    * @param {UserResolvable} user The user that is part of the guild
    * @returns {?GuildMember}
@@ -104,24 +105,58 @@ class ClientDataResolver {
   }
 
   /**
-   * Data that can be resolved to give a Channel. This can be:
-   * * A Channel object
-   * * A Message object (the channel the message was sent in)
-   * * A Guild object (the #general channel)
-   * * A channel ID
-   * @typedef {Channel|Guild|Message|string} ChannelResolvable
+   * Data that can be resolved to a Role object. This can be:
+   * * A Role
+   * * A Snowflake
+   * @typedef {Role|Snowflake} RoleResolvable
    */
 
   /**
-   * Resolves a ChannelResolvable to a Channel object
+    * Resolves a RoleResolvable to a Role object.
+    * @param {GuildResolvable} guild The guild that this role is part of
+    * @param {RoleResolvable} role The role resolvable to resolve
+    * @returns {?Role}
+    */
+  resolveRole(guild, role) {
+    if (role instanceof Role) return role;
+    guild = this.resolveGuild(guild);
+    if (!guild) return null;
+    if (typeof role === 'string') return guild.roles.get(role);
+    return null;
+  }
+
+  /**
+   * Data that can be resolved to give a Channel object. This can be:
+   * * A Channel object
+   * * A Message object (the channel the message was sent in)
+   * * A Guild object (the #general channel)
+   * * A Snowflake
+   * @typedef {Channel|Guild|Message|Snowflake} ChannelResolvable
+   */
+
+  /**
+   * Resolves a ChannelResolvable to a Channel object.
    * @param {ChannelResolvable} channel The channel resolvable to resolve
    * @returns {?Channel}
    */
   resolveChannel(channel) {
     if (channel instanceof Channel) return channel;
+    if (typeof channel === 'string') return this.client.channels.get(channel) || null;
     if (channel instanceof Message) return channel.channel;
     if (channel instanceof Guild) return channel.channels.get(channel.id) || null;
-    if (typeof channel === 'string') return this.client.channels.get(channel) || null;
+    return null;
+  }
+
+  /**
+   * Resolves a ChannelResolvable to a channel ID.
+   * @param {ChannelResolvable} channel The channel resolvable to resolve
+   * @returns {?Snowflake}
+   */
+  resolveChannelID(channel) {
+    if (channel instanceof Channel) return channel.id;
+    if (typeof channel === 'string') return channel;
+    if (channel instanceof Message) return channel.channel.id;
+    if (channel instanceof Guild) return channel.defaultChannel.id;
     return null;
   }
 
@@ -133,77 +168,15 @@ class ClientDataResolver {
    */
 
   /**
-   * Resolves InviteResolvable to an invite code
+   * Resolves InviteResolvable to an invite code.
    * @param {InviteResolvable} data The invite resolvable to resolve
    * @returns {string}
    */
   resolveInviteCode(data) {
-    const inviteRegex = /discord(?:app)?\.(?:gg|com\/invite)\/([a-z0-9]{5})/i;
+    const inviteRegex = /discord(?:app\.com\/invite|\.gg(?:\/invite)?)\/([\w-]{2,255})/i;
     const match = inviteRegex.exec(data);
     if (match && match[1]) return match[1];
     return data;
-  }
-
-  /**
-   * Data that can be resolved to give a permission number. This can be:
-   * * A string
-   * * A permission number
-   *
-   * Possible strings:
-   * ```js
-   * [
-   *   "CREATE_INSTANT_INVITE",
-   *   "KICK_MEMBERS",
-   *   "BAN_MEMBERS",
-   *   "ADMINISTRATOR",
-   *   "MANAGE_CHANNELS",
-   *   "MANAGE_GUILD",
-   *   "ADD_REACTIONS", // add reactions to messages
-   *   "READ_MESSAGES",
-   *   "SEND_MESSAGES",
-   *   "SEND_TTS_MESSAGES",
-   *   "MANAGE_MESSAGES",
-   *   "EMBED_LINKS",
-   *   "ATTACH_FILES",
-   *   "READ_MESSAGE_HISTORY",
-   *   "MENTION_EVERYONE",
-   *   "EXTERNAL_EMOJIS", // use external emojis
-   *   "CONNECT", // connect to voice
-   *   "SPEAK", // speak on voice
-   *   "MUTE_MEMBERS", // globally mute members on voice
-   *   "DEAFEN_MEMBERS", // globally deafen members on voice
-   *   "MOVE_MEMBERS", // move member's voice channels
-   *   "USE_VAD", // use voice activity detection
-   *   "CHANGE_NICKNAME",
-   *   "MANAGE_NICKNAMES", // change nicknames of others
-   *   "MANAGE_ROLES_OR_PERMISSIONS",
-   *   "MANAGE_WEBHOOKS",
-   *   "MANAGE_EMOJIS"
-   * ]
-   * ```
-   * @typedef {string|number} PermissionResolvable
-   */
-
-  /**
-   * Resolves a PermissionResolvable to a permission number
-   * @param {PermissionResolvable} permission The permission resolvable to resolve
-   * @returns {number}
-   */
-  resolvePermission(permission) {
-    if (typeof permission === 'string') permission = Constants.PermissionFlags[permission];
-    if (typeof permission !== 'number' || permission < 1) throw new Error(Constants.Errors.NOT_A_PERMISSION);
-    return permission;
-  }
-
-  /**
-   * Turn an array of permissions into a valid Discord permission bitfield
-   * @param {PermissionResolvable[]} permissions Permissions to resolve together
-   * @returns {number}
-   */
-  resolvePermissions(permissions) {
-    let bitfield = 0;
-    for (const permission of permissions) bitfield |= this.resolvePermission(permission);
-    return bitfield;
   }
 
   /**
@@ -215,7 +188,7 @@ class ClientDataResolver {
    */
 
   /**
-   * Resolves a StringResolvable to a string
+   * Resolves a StringResolvable to a string.
    * @param {StringResolvable} data The string resolvable to resolve
    * @returns {string}
    */
@@ -223,6 +196,20 @@ class ClientDataResolver {
     if (typeof data === 'string') return data;
     if (data instanceof Array) return data.join('\n');
     return String(data);
+  }
+
+
+  /**
+   * Resolves a Base64Resolvable, a string, or a BufferResolvable to a Base 64 image.
+   * @param {BufferResolvable|Base64Resolvable} image The image to be resolved
+   * @returns {Promise<?string>}
+   */
+  resolveImage(image) {
+    if (!image) return Promise.resolve(null);
+    if (typeof image === 'string' && image.startsWith('data:')) {
+      return Promise.resolve(image);
+    }
+    return this.resolveFile(image).then(this.resolveBase64);
   }
 
   /**
@@ -233,7 +220,7 @@ class ClientDataResolver {
    */
 
   /**
-   * Resolves a Base64Resolvable to a Base 64 image
+   * Resolves a Base64Resolvable to a Base 64 image.
    * @param {Base64Resolvable} data The base 64 resolvable you want to resolve
    * @returns {?string}
    */
@@ -243,43 +230,50 @@ class ClientDataResolver {
   }
 
   /**
-   * Data that can be resolved to give a Buffer. This can be:
-   * * A Buffer
-   * * The path to a local file
-   * * A URL
-   * @typedef {string|Buffer} BufferResolvable
-   */
+    * Data that can be resolved to give a Buffer. This can be:
+    * * A Buffer
+    * * The path to a local file
+    * * A URL
+    * * A Stream
+    * @typedef {string|Buffer} BufferResolvable
+    */
 
   /**
-   * Resolves a BufferResolvable to a Buffer
-   * @param {BufferResolvable} resource The buffer resolvable to resolve
-   * @returns {Promise<Buffer>}
-   */
-  resolveBuffer(resource) {
+    * @external Stream
+    * @see {@link https://nodejs.org/api/stream.html}
+    */
+
+  /**
+    * Resolves a BufferResolvable to a Buffer.
+    * @param {BufferResolvable|Stream} resource The buffer or stream resolvable to resolve
+    * @returns {Promise<Buffer>}
+    */
+  resolveFile(resource) {
     if (resource instanceof Buffer) return Promise.resolve(resource);
-    if (this.client.browser && resource instanceof ArrayBuffer) return Promise.resolve(convertArrayBuffer(resource));
+    if (this.client.browser && resource instanceof ArrayBuffer) return Promise.resolve(convertToBuffer(resource));
 
     if (typeof resource === 'string') {
+      if (/^https?:\/\//.test(resource)) {
+        return superagent.get(resource).then(res => res.body instanceof Buffer ? res.body : Buffer.from(res.text));
+      }
       return new Promise((resolve, reject) => {
-        if (/^https?:\/\//.test(resource)) {
-          const req = request.get(resource).set('Content-Type', 'blob');
-          if (this.client.browser) req.responseType('arraybuffer');
-          req.end((err, res) => {
-            if (err) return reject(err);
-            if (this.client.browser) return resolve(convertArrayBuffer(res.xhr.response));
-            if (!(res.body instanceof Buffer)) return reject(new TypeError('The response body isn\'t a Buffer.'));
-            return resolve(res.body);
+        const file = path.resolve(resource);
+        fs.stat(file, (err, stats) => {
+          if (err) return reject(err);
+          if (!stats || !stats.isFile()) return reject(new Error(`The file could not be found: ${file}`));
+          fs.readFile(file, (err2, data) => {
+            if (err2) reject(err2);
+            else resolve(data);
           });
-        } else {
-          const file = path.resolve(resource);
-          fs.stat(file, (err, stats) => {
-            if (err) reject(err);
-            if (!stats || !stats.isFile()) throw new Error(`The file could not be found: ${file}`);
-            fs.readFile(file, (err2, data) => {
-              if (err2) reject(err2); else resolve(data);
-            });
-          });
-        }
+          return null;
+        });
+      });
+    } else if (resource && resource.pipe && typeof resource.pipe === 'function') {
+      return new Promise((resolve, reject) => {
+        const buffers = [];
+        resource.once('error', reject);
+        resource.on('data', data => buffers.push(data));
+        resource.once('end', () => resolve(Buffer.concat(buffers)));
       });
     }
 
@@ -288,23 +282,96 @@ class ClientDataResolver {
 
   /**
    * Data that can be resolved to give an emoji identifier. This can be:
-   * * A string
-   * * An Emoji
-   * * A ReactionEmoji
+   * * The unicode representation of an emoji
+   * * A custom emoji ID
+   * * An Emoji object
+   * * A ReactionEmoji object
    * @typedef {string|Emoji|ReactionEmoji} EmojiIdentifierResolvable
    */
 
   /**
-   * Resolves an EmojiResolvable to an emoji identifier
+   * Resolves an EmojiResolvable to an emoji identifier.
    * @param {EmojiIdentifierResolvable} emoji The emoji resolvable to resolve
-   * @returns {string}
+   * @returns {?string}
    */
   resolveEmojiIdentifier(emoji) {
     if (emoji instanceof Emoji || emoji instanceof ReactionEmoji) return emoji.identifier;
     if (typeof emoji === 'string') {
-      if (!emoji.includes('%')) return encodeURIComponent(emoji);
+      if (this.client.emojis.has(emoji)) return this.client.emojis.get(emoji).identifier;
+      else if (!emoji.includes('%')) return encodeURIComponent(emoji);
+      else return emoji;
     }
     return null;
+  }
+
+  /**
+   * Can be a Hex Literal, Hex String, Number, RGB Array, or one of the following
+   * ```
+   * [
+   *   'DEFAULT',
+   *   'WHITE',
+   *   'AQUA',
+   *   'GREEN',
+   *   'BLUE',
+   *   'PURPLE',
+   *   'LUMINOUS_VIVID_PINK',
+   *   'GOLD',
+   *   'ORANGE',
+   *   'RED',
+   *   'GREY',
+   *   'DARKER_GREY',
+   *   'NAVY',
+   *   'DARK_AQUA',
+   *   'DARK_GREEN',
+   *   'DARK_BLUE',
+   *   'DARK_PURPLE',
+   *   'DARK_VIVID_PINK',
+   *   'DARK_GOLD',
+   *   'DARK_ORANGE',
+   *   'DARK_RED',
+   *   'DARK_GREY',
+   *   'LIGHT_GREY',
+   *   'DARK_NAVY',
+   *   'RANDOM',
+   * ]
+   * ```
+   * or something like
+   * ```
+   * [255, 0, 255]
+   * ```
+   * for purple
+   * @typedef {string|number|Array} ColorResolvable
+   */
+
+  /**
+   * Resolves a ColorResolvable into a color number.
+   * @param {ColorResolvable} color Color to resolve
+   * @returns {number} A color
+   */
+  static resolveColor(color) {
+    if (typeof color === 'string') {
+      if (color === 'RANDOM') return Math.floor(Math.random() * (0xFFFFFF + 1));
+      if (color === 'DEFAULT') return 0;
+      color = Constants.Colors[color] || parseInt(color.replace('#', ''), 16);
+    } else if (color instanceof Array) {
+      color = (color[0] << 16) + (color[1] << 8) + color[2];
+    }
+
+    if (color < 0 || color > 0xFFFFFF) {
+      throw new RangeError('Color must be within the range 0 - 16777215 (0xFFFFFF).');
+    } else if (color && isNaN(color)) {
+      throw new TypeError('Unable to convert color to a number.');
+    }
+
+    return color;
+  }
+
+  /**
+   * @param {ColorResolvable} color Color to resolve
+   * @returns {number} A color
+   */
+  resolveColor(color) {
+    return this.constructor.resolveColor(color);
   }
 }
 

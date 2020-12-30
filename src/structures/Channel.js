@@ -1,7 +1,9 @@
-"use strict";
+'use strict';
+
+const Snowflake = require('../util/Snowflake');
 
 /**
- * Represents any channel on Discord
+ * Represents any channel on Discord.
  */
 class Channel {
   constructor(client, data) {
@@ -19,9 +21,18 @@ class Channel {
      * * `group` - a Group DM channel
      * * `text` - a guild text channel
      * * `voice` - a guild voice channel
+     * * `category` - a guild category channel
+     * * `news` - a guild news channel
+     * * `store` - a guild store channel
      * @type {string}
      */
     this.type = null;
+
+    /**
+     * Whether the channel has been deleted
+     * @type {boolean}
+     */
+    this.deleted = false;
 
     if (data) this.setup(data);
   }
@@ -29,7 +40,7 @@ class Channel {
   setup(data) {
     /**
      * The unique ID of the channel
-     * @type {string}
+     * @type {Snowflake}
      */
     this.id = data.id;
   }
@@ -40,7 +51,7 @@ class Channel {
    * @readonly
    */
   get createdTimestamp() {
-    return (this.id / 4194304) + 1420070400000;
+    return Snowflake.deconstruct(this.id).timestamp;
   }
 
   /**
@@ -53,13 +64,13 @@ class Channel {
   }
 
   /**
-   * Deletes the channel
+   * Deletes the channel.
    * @returns {Promise<Channel>}
    * @example
-   * // delete the channel
+   * // Delete the channel
    * channel.delete()
-   *  .then() // success
-   *  .catch(console.error); // log error
+   *   .then(console.log)
+   *   .catch(console.error);
    */
   delete() {
     return this.client.rest.methods.deleteChannel(this);

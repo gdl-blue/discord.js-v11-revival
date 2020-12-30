@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const UserAgentManager = require('./UserAgentManager');
 const RESTMethods = require('./RESTMethods');
@@ -17,12 +17,20 @@ class RESTManager {
     this.globallyRateLimited = false;
   }
 
+  destroy() {
+    for (const handlerKey of Object.keys(this.handlers)) {
+      const handler = this.handlers[handlerKey];
+      if (handler.destroy) handler.destroy();
+    }
+  }
+
   push(handler, apiRequest) {
     return new Promise((resolve, reject) => {
       handler.push({
         request: apiRequest,
         resolve,
         reject,
+        retries: 0,
       });
     });
   }
@@ -38,9 +46,8 @@ class RESTManager {
     }
   }
 
-  makeRequest(method, url, auth, data, file) {
-    const apiRequest = new APIRequest(this, method, url, auth, data, file);
-
+  makeRequest(method, url, auth, data, file, reason) {
+    const apiRequest = new APIRequest(this, method, url, auth, data, file, reason);
     if (!this.handlers[apiRequest.route]) {
       const RequestHandlerType = this.getRequestHandler();
       this.handlers[apiRequest.route] = new RequestHandlerType(this, apiRequest.route);

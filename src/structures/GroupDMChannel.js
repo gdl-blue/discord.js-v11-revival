@@ -1,8 +1,9 @@
-"use strict";
+'use strict';
 
 const Channel = require('./Channel');
-const TextBasedChannel = require('./interface/TextBasedChannel');
+const TextBasedChannel = require('./interfaces/TextBasedChannel');
 const Collection = require('../util/Collection');
+const Constants = require('../util/Constants');
 
 /*
 { type: 3,
@@ -27,7 +28,7 @@ const Collection = require('../util/Collection');
 */
 
 /**
- * Represents a Group DM on Discord
+ * Represents a Group DM on Discord.
  * @extends {Channel}
  * @implements {TextBasedChannel}
  */
@@ -43,27 +44,47 @@ class GroupDMChannel extends Channel {
     super.setup(data);
 
     /**
-     * The name of this Group DM, can be null if one isn't set.
+     * The name of this Group DM, can be null if one isn't set
      * @type {string}
      */
     this.name = data.name;
 
     /**
-     * A hash of the Group DM icon.
-     * @type {string}
+     * A hash of this Group DM icon
+     * @type {?string}
      */
     this.icon = data.icon;
 
     /**
-     * The user ID of this Group DM's owner.
+     * The user ID of this Group DM's owner
      * @type {string}
      */
     this.ownerID = data.owner_id;
 
+    /**
+     * If the DM is managed by an application
+     * @type {boolean}
+     */
+    this.managed = data.managed;
+
+    /**
+     * Application ID of the application that made this Group DM, if applicable
+     * @type {?string}
+     */
+    this.applicationID = data.application_id;
+
+    if (data.nicks) {
+      /**
+       * Nicknames for group members
+       * @type {?Collection<Snowflake, string>}
+       */
+      this.nicks = new Collection(data.nicks.map(n => [n.id, n.nick]));
+    }
+
     if (!this.recipients) {
       /**
-       * A collection of the recipients of this DM, mapped by their ID.
-       * @type {Collection<string, User>}
+       * A collection of the recipients of this DM, mapped by their ID
+       * @type {Collection<Snowflake, User>}
        */
       this.recipients = new Collection();
     }
@@ -75,16 +96,43 @@ class GroupDMChannel extends Channel {
       }
     }
 
+    /**
+     * The ID of the last message in the channel, if one was sent
+     * @type {?Snowflake}
+     */
     this.lastMessageID = data.last_message_id;
+
+    /**
+     * The timestamp when the last pinned message was pinned, if there was one
+     * @type {?number}
+     */
+    this.lastPinTimestamp = data.last_pin_timestamp ? new Date(data.last_pin_timestamp).getTime() : null;
   }
 
   /**
-   * The owner of this Group DM.
+   * The owner of this Group DM
    * @type {User}
    * @readonly
    */
   get owner() {
     return this.client.users.get(this.ownerID);
+  }
+
+  /**
+   * The URL to this guild's icon
+   * @type {?string}
+   * @readonly
+   */
+  get iconURL() {
+    if (!this.icon) return null;
+    return Constants.Endpoints.Channel(this).Icon(this.client.options.http.cdn, this.icon);
+  }
+
+  edit(data) {
+    const _data = {};
+    if (data.name) _data.name = data.name;
+    if (typeof data.icon !== 'undefined') _data.icon = data.icon;
+    return this.client.rest.methods.updateGroupDMChannel(this, _data);
   }
 
   /**
@@ -109,13 +157,61 @@ class GroupDMChannel extends Channel {
   }
 
   /**
+   * Add a user to the DM
+   * @param {UserResolvable|string} accessTokenOrID Access token or user resolvable
+   * @param {string} [nick] Permanent nickname to give the user (only available if a bot is creating the DM)
+   * @returns {Promise<GroupDMChannel>}
+   */
+
+  addUser(accessTokenOrID, nick) {
+    return this.client.rest.methods.addUserToGroupDM(this, {
+      nick,
+      id: this.client.resolver.resolveUserID(accessTokenOrID),
+      accessToken: accessTokenOrID,
+    });
+  }
+
+  /**
+   * Set a new GroupDMChannel icon.
+   * @param {Base64Resolvable|BufferResolvable} icon The new icon of the group dm
+   * @returns {Promise<GroupDMChannel>}
+   * @example
+   * // Edit the group dm icon
+   * channel.setIcon('./icon.png')
+   *  .then(updated => console.log('Updated the channel icon'))
+   *  .catch(console.error);
+   */
+  setIcon(icon) {
+    return this.client.resolver.resolveImage(icon).then(data => this.edit({ icon: data }));
+  }
+
+  /**
+   * Sets a new name for this Group DM.
+   * @param {string} name New name for this Group DM
+   * @returns {Promise<GroupDMChannel>}
+   */
+  setName(name) {
+    return this.edit({ name });
+  }
+
+  /**
+   * Removes a user from this Group DM.
+   * @param {UserResolvable} user User to remove
+   * @returns {Promise<GroupDMChannel>}
+   */
+  removeUser(user) {
+    const id = this.client.resolver.resolveUserID(user);
+    return this.client.rest.methods.removeUserFromGroupDM(this, id);
+  }
+
+  /**
    * When concatenated with a string, this automatically concatenates the channel's name instead of the Channel object.
    * @returns {string}
    * @example
-   * // logs: Hello from My Group DM!
+   * // Logs: Hello from My Group DM!
    * console.log(`Hello from ${channel}!`);
    * @example
-   * // logs: Hello from My Group DM!
+   * // Logs: Hello from My Group DM!
    * console.log(`Hello from ' + channel + '!');
    */
   toString() {
@@ -123,24 +219,30 @@ class GroupDMChannel extends Channel {
   }
 
   // These are here only for documentation purposes - they are implemented by TextBasedChannel
-  send() { return; }
-  sendMessage() { return; }
-  sendEmbed() { return; }
-  sendFile() { return; }
-  sendCode() { return; }
-  fetchMessage() { return; }
-  fetchMessages() { return; }
-  fetchPinnedMessages() { return; }
-  startTyping() { return; }
-  stopTyping() { return; }
-  get typing() { return; }
-  get typingCount() { return; }
-  createCollector() { return; }
-  awaitMessages() { return; }
-  bulkDelete() { return; }
-  _cacheMessage() { return; }
+  /* eslint-disable no-empty-function */
+  get lastPinAt() {}
+  send() {}
+  sendMessage() {}
+  sendEmbed() {}
+  sendFile() {}
+  sendFiles() {}
+  sendCode() {}
+  fetchMessage() {}
+  fetchMessages() {}
+  fetchPinnedMessages() {}
+  search() {}
+  startTyping() {}
+  stopTyping() {}
+  get typing() {}
+  get typingCount() {}
+  createCollector() {}
+  createMessageCollector() {}
+  awaitMessages() {}
+  // Doesn't work on Group DMs; bulkDelete() {}
+  acknowledge() {}
+  _cacheMessage() {}
 }
 
-TextBasedChannel.applyToClass(GroupDMChannel, true);
+TextBasedChannel.applyToClass(GroupDMChannel, true, ['bulkDelete']);
 
 module.exports = GroupDMChannel;

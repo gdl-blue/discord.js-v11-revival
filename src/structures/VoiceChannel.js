@@ -1,7 +1,8 @@
-"use strict";
+'use strict';
 
 const GuildChannel = require('./GuildChannel');
 const Collection = require('../util/Collection');
+const Permissions = require('../util/Permissions');
 
 /**
  * Represents a guild voice channel on Discord.
@@ -12,8 +13,8 @@ class VoiceChannel extends GuildChannel {
     super(guild, data);
 
     /**
-     * The members in this voice channel.
-     * @type {Collection<string, GuildMember>}
+     * The members in this voice channel
+     * @type {Collection<Snowflake, GuildMember>}
      */
     this.members = new Collection();
 
@@ -27,7 +28,7 @@ class VoiceChannel extends GuildChannel {
      * The bitrate of this voice channel
      * @type {number}
      */
-    this.bitrate = data.bitrate;
+    this.bitrate = data.bitrate * 0.001;
 
     /**
      * The maximum amount of users allowed in this channel - 0 means unlimited.
@@ -48,58 +49,83 @@ class VoiceChannel extends GuildChannel {
   }
 
   /**
+   * Checks if the voice channel is full
+   * @type {boolean}
+   * @readonly
+   */
+  get full() {
+    return this.userLimit > 0 && this.members.size >= this.userLimit;
+  }
+
+  /**
+   * Whether the channel is deletable by the client user
+   * @type {boolean}
+   * @readonly
+   */
+  get deletable() {
+    return super.deletable && this.permissionsFor(this.client.user).has(Permissions.FLAGS.CONNECT);
+  }
+
+  /**
    * Checks if the client has permission join the voice channel
    * @type {boolean}
+   * @readonly
    */
   get joinable() {
     if (this.client.browser) return false;
-    return this.permissionsFor(this.client.user).hasPermission('CONNECT');
+    if (!this.permissionsFor(this.client.user).has('CONNECT')) return false;
+    if (this.full && !this.permissionsFor(this.client.user).has('MOVE_MEMBERS')) return false;
+    return true;
   }
 
   /**
    * Checks if the client has permission to send audio to the voice channel
    * @type {boolean}
+   * @readonly
    */
   get speakable() {
-    return this.permissionsFor(this.client.user).hasPermission('SPEAK');
+    return this.permissionsFor(this.client.user).has('SPEAK');
   }
 
   /**
-   * Sets the bitrate of the channel
+   * Sets the bitrate of the channel (in kbps).
    * @param {number} bitrate The new bitrate
+   * @param {string} [reason] Reason for changing the channel's bitrate
    * @returns {Promise<VoiceChannel>}
    * @example
-   * // set the bitrate of a voice channel
-   * voiceChannel.setBitrate(48000)
-   *  .then(vc => console.log(`Set bitrate to ${vc.bitrate} for ${vc.name}`))
-   *  .catch(console.error);
+   * // Set the bitrate of a voice channel
+   * voiceChannel.setBitrate(48)
+   *   .then(vc => console.log(`Set bitrate to ${vc.bitrate}kbps for ${vc.name}`))
+   *   .catch(console.error);
    */
-  setBitrate(bitrate) {
-    return this.edit({ bitrate });
+  setBitrate(bitrate, reason) {
+    bitrate *= 1000;
+    return this.edit({ bitrate }, reason);
   }
 
   /**
-   * Sets the user limit of the channel
+   * Sets the user limit of the channel.
    * @param {number} userLimit The new user limit
+   * @param {string} [reason] Reason for changing the user limit
    * @returns {Promise<VoiceChannel>}
    * @example
-   * // set the user limit of a voice channel
+   * // Set the user limit of a voice channel
    * voiceChannel.setUserLimit(42)
-   *  .then(vc => console.log(`Set user limit to ${vc.userLimit} for ${vc.name}`))
-   *  .catch(console.error);
+   *   .then(vc => console.log(`Set user limit to ${vc.userLimit} for ${vc.name}`))
+   *   .catch(console.error);
    */
-  setUserLimit(userLimit) {
-    return this.edit({ userLimit });
+  setUserLimit(userLimit, reason) {
+    return this.edit({ userLimit }, reason);
   }
 
   /**
-   * Attempts to join this voice channel
+   * Attempts to join this voice channel.
    * @returns {Promise<VoiceConnection>}
    * @example
-   * // join a voice channel
+   * // Join a voice channel
    * voiceChannel.join()
-   *  .then(connection => console.log('Connected!'))
-   *  .catch(console.error);
+   *   .then(connection => console.log('Connected!'))
+   *   .catch(console.error);
    */
   join() {
     if (this.client.browser) return Promise.reject(new Error('Voice connections are not available in browsers.'));
@@ -107,9 +133,9 @@ class VoiceChannel extends GuildChannel {
   }
 
   /**
-   * Leaves this voice channel
+   * Leaves this voice channel.
    * @example
-   * // leave a voice channel
+   * // Leave a voice channel
    * voiceChannel.leave();
    */
   leave() {

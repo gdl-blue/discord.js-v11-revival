@@ -1,4 +1,6 @@
-"use strict";
+'use strict';
+
+const Permissions = require('../util/Permissions');
 
 /**
  * Represents a permission overwrite for a role or member in a guild channel.
@@ -19,7 +21,7 @@ class PermissionOverwrites {
   setup(data) {
     /**
      * The ID of this overwrite, either a user ID or a role ID
-     * @type {string}
+     * @type {Snowflake}
      */
     this.id = data.id;
 
@@ -29,16 +31,40 @@ class PermissionOverwrites {
      */
     this.type = data.type == 0 ? 'role' : 'member';
 
+    /**
+     * The permissions that are denied for the user or role as a bitfield.
+     * @type {number}
+     */
     this.deny = data.deny;
+
+    /**
+     * The permissions that are allowed for the user or role as a bitfield.
+     * @type {number}
+     */
     this.allow = data.allow;
+
+    /**
+     * The permissions that are denied for the user or role.
+     * @type {Permissions}
+     * @deprecated
+     */
+    this.denied = new Permissions(data.deny).freeze();
+
+    /**
+     * The permissions that are allowed for the user or role.
+     * @type {Permissions}
+     * @deprecated
+     */
+    this.allowed = new Permissions(data.allow).freeze();
   }
 
   /**
    * Delete this Permission Overwrite.
+   * @param {string} [reason] Reason for deleting this overwrite
    * @returns {Promise<PermissionOverwrites>}
    */
-  delete() {
-    return this.channel.client.rest.methods.deletePermissionOverwrites(this);
+  delete(reason) {
+    return this.channel.client.rest.methods.deletePermissionOverwrites(this, reason);
   }
 }
 

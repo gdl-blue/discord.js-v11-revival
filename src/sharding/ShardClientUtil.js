@@ -1,18 +1,20 @@
-"use strict";
+'use strict';
 
-const makeError = require('../util/MakeError');
-const makePlainError = require('../util/MakePlainError');
+const Util = require('../util/Util');
 
 /**
- * Helper class for sharded clients spawned as a child process, such as from a ShardingManager
+ * Helper class for sharded clients spawned as a child process, such as from a ShardingManager.
  */
 class ShardClientUtil {
   /**
-   * @param {Client} client Client of the current shard
+   * @param {Client} client The client of the current shard
    */
   constructor(client) {
     this.client = client;
     process.on('message', this._handleMessage.bind(this));
+    client.on('ready', () => { process.send({ _ready: true }); });
+    client.on('disconnect', () => { process.send({ _disconnect: true }); });
+    client.on('reconnecting', () => { process.send({ _reconnecting: true }); });
   }
 
   /**
@@ -34,34 +36,35 @@ class ShardClientUtil {
   }
 
   /**
-   * Sends a message to the master process
+   * Sends a message to the master process.
    * @param {*} message Message to send
    * @returns {Promise<void>}
    */
   send(message) {
     return new Promise((resolve, reject) => {
-      const sent = process.send(message, err => {
+      process.send(message, err => {
         if (err) reject(err); else resolve();
       });
-      if (!sent) throw new Error('Failed to send message to master process.');
     });
   }
 
   /**
-   * Fetches a Client property value of each shard.
-   * @param {string} prop Name of the Client property to get, using periods for nesting
+   * Fetches a client property value of each shard.
+   * @param {string} prop Name of the client property to get, using periods for nesting
    * @returns {Promise<Array>}
    * @example
-   * client.shard.fetchClientValues('guilds.size').then(results => {
-   *   console.log(`${results.reduce((prev, val) => prev + val, 0)} total guilds`);
-   * }).catch(console.error);
+   * client.shard.fetchClientValues('guilds.size')
+   *   .then(results => {
+   *     console.log(`${results.reduce((prev, val) => prev + val, 0)} total guilds`);
+   *   })
+   *   .catch(console.error);
    */
   fetchClientValues(prop) {
     return new Promise((resolve, reject) => {
       const listener = message => {
         if (!message || message._sFetchProp !== prop) return;
         process.removeListener('message', listener);
-        if (!message._error) resolve(message._result); else reject(makeError(message._error));
+        if (!message._error) resolve(message._result); else reject(Util.makeError(message._error));
       };
       process.on('message', listener);
 
@@ -82,7 +85,7 @@ class ShardClientUtil {
       const listener = message => {
         if (!message || message._sEval !== script) return;
         process.removeListener('message', listener);
-        if (!message._error) resolve(message._result); else reject(makeError(message._error));
+        if (!message._error) resolve(message._result); else reject(Util.makeError(message._error));
       };
       process.on('message', listener);
 
@@ -94,7 +97,7 @@ class ShardClientUtil {
   }
 
   /**
-   * Handles an IPC message
+   * Handles an IPC message.
    * @param {*} message Message received
    * @private
    */
@@ -109,13 +112,13 @@ class ShardClientUtil {
       try {
         this._respond('eval', { _eval: message._eval, _result: this.client._eval(message._eval) });
       } catch (err) {
-        this._respond('eval', { _eval: message._eval, _error: makePlainError(err) });
+        this._respond('eval', { _eval: message._eval, _error: Util.makePlainError(err) });
       }
     }
   }
 
   /**
-   * Sends a message to the master process, emitting an error from the client upon failure
+   * Sends a message to the master process, emitting an error from the client upon failure.
    * @param {string} type Type of response to send
    * @param {*} message Message to send
    * @private
@@ -128,8 +131,8 @@ class ShardClientUtil {
   }
 
   /**
-   * Creates/gets the singleton of this class
-   * @param {Client} client Client to use
+   * Creates/gets the singleton of this class.
+   * @param {Client} client The client to use
    * @returns {ShardClientUtil}
    */
   static singleton(client) {

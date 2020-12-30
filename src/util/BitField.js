@@ -1,87 +1,85 @@
-"use strict";
-
-// transpiled "function f(...args)" form using http://jsnice.org/
+'use strict';
 
 /**
  * Data structure that makes it easy to interact with a bitfield.
  */
 class BitField {
+  /**
+   * @param {BitFieldResolvable} [bits=0] Bits(s) to read from
+   */
+  constructor(bits) {
     /**
-     * @param {BitFieldResolvable} [bits=0] Bits(s) to read from
+     * Bitfield of the packed bits
+     * @type {number}
      */
-    constructor(bits) {
-        /**
-         * Bitfield of the packed bits
-         * @type {number}
-         */
-        this.bitfield = this.constructor.resolve(bits);
-    }
+    this.bitfield = this.constructor.resolve(bits);
+  }
 
-    /**
-     * Checks whether the bitfield has a bit, or any of multiple bits.
-     * @param {BitFieldResolvable} bit Bit(s) to check for
-     * @returns {boolean}
-     */
-    any(bit) {
-        return (this.bitfield & this.constructor.resolve(bit)) !== 0;
-    }
+  /**
+   * Checks whether the bitfield has a bit, or any of multiple bits.
+   * @param {BitFieldResolvable} bit Bit(s) to check for
+   * @returns {boolean}
+   */
+  any(bit) {
+    return (this.bitfield & this.constructor.resolve(bit)) !== 0;
+  }
 
-    /**
-     * Checks if this bitfield equals another
-     * @param {BitFieldResolvable} bit Bit(s) to check for
-     * @returns {boolean}
-     */
-    equals(bit) {
-        return this.bitfield === this.constructor.resolve(bit);
-    }
+  /**
+   * Checks if this bitfield equals another
+   * @param {BitFieldResolvable} bit Bit(s) to check for
+   * @returns {boolean}
+   */
+  equals(bit) {
+    return this.bitfield === this.constructor.resolve(bit);
+  }
 
-    /**
-     * Checks whether the bitfield has a bit, or multiple bits.
-     * @param {BitFieldResolvable} bit Bit(s) to check for
-     * @returns {boolean}
-     */
-    has(bit) {
-        if (Array.isArray(bit)) return bit.every(p => this.has(p));
-        bit = this.constructor.resolve(bit);
-        return (this.bitfield & bit) === bit;
-    }
+  /**
+   * Checks whether the bitfield has a bit, or multiple bits.
+   * @param {BitFieldResolvable} bit Bit(s) to check for
+   * @returns {boolean}
+   */
+  has(bit) {
+    if (Array.isArray(bit)) return bit.every(p => this.has(p));
+    bit = this.constructor.resolve(bit);
+    return (this.bitfield & bit) === bit;
+  }
 
-    /**
-     * Gets all given bits that are missing from the bitfield.
-     * @param {BitFieldResolvable} bits Bits(s) to check for
-     * @param {...*} hasParams Additional parameters for the has method, if any
-     * @returns {string[]}
-     */
-    missing(bits$jscomp$0) {
-	  var _this$jscomp$0 = this;
-	  var _len$jscomp$0 = arguments.length;
-	  var hasParams$jscomp$0 = Array(_len$jscomp$0 > 1 ? _len$jscomp$0 - 1 : 0);
-	  var _key$jscomp$0 = 1;
-	  for (; _key$jscomp$0 < _len$jscomp$0; _key$jscomp$0++) {
-		hasParams$jscomp$0[_key$jscomp$0 - 1] = arguments[_key$jscomp$0];
+  /**
+   * Gets all given bits that are missing from the bitfield.
+   * @param {BitFieldResolvable} bits Bits(s) to check for
+   * @param {...*} hasParams Additional parameters for the has method, if any
+   * @returns {string[]}
+   */
+  missing(b) {
+	  var _this = this;
+	  var _len = arguments.length;
+	  var originalArgs = Array(_len > 1 ? _len - 1 : 0);
+	  var _key = 1;
+	  for (; _key < _len; _key++) {
+		originalArgs[_key - 1] = arguments[_key];
 	  }
-	  if (!Array.isArray(bits$jscomp$0)) {
-		bits$jscomp$0 = (new this.constructor(bits$jscomp$0)).toArray(false);
+	  if (!Array.isArray(b)) {
+		b = (new this.constructor(b)).toArray(false);
 	  }
-	  return bits$jscomp$0.filter(function(p$jscomp$0) {
-		return !_this$jscomp$0.has.apply(_this$jscomp$0, [p$jscomp$0].concat(hasParams$jscomp$0));
+	  return b.filter(function(intfName) {
+		return !_this.has.apply(_this, [intfName].concat(originalArgs));
 	  });
 	}
 
-    /**
-     * Freezes these bits, making them immutable.
-     * @returns {Readonly<BitField>} These bits
-     */
-    freeze() {
-        return Object.freeze(this);
-    }
+  /**
+   * Freezes these bits, making them immutable.
+   * @returns {Readonly<BitField>} These bits
+   */
+  freeze() {
+    return Object.freeze(this);
+  }
 
-    /**
-     * Adds bits to these ones.
-     * @param {...BitFieldResolvable} [bits] Bits to add
-     * @returns {BitField} These bits or new BitField if the instance is frozen.
-     */
-    add() {
+  /**
+   * Adds bits to these ones.
+   * @param {...BitFieldResolvable} [bits] Bits to add
+   * @returns {BitField} These bits or new BitField if the instance is frozen.
+   */
+  add() {
 	  var total$jscomp$0 = 0;
 	  var _len$jscomp$0 = arguments.length;
 	  var bits$jscomp$0 = Array(_len$jscomp$0);
@@ -120,12 +118,12 @@ class BitField {
 	  return this;
 	}
 
-    /**
-     * Removes bits from these.
-     * @param {...BitFieldResolvable} [bits] Bits to remove
-     * @returns {BitField} These bits or new BitField if the instance is frozen.
-     */
-    remove() {
+  /**
+   * Removes bits from these.
+   * @param {...BitFieldResolvable} [bits] Bits to remove
+   * @returns {BitField} These bits or new BitField if the instance is frozen.
+   */
+  remove() {
 	  var total$jscomp$0 = 0;
 	  var _len$jscomp$0 = arguments.length;
 	  var bits$jscomp$0 = Array(_len$jscomp$0);
@@ -164,13 +162,13 @@ class BitField {
 	  return this;
 	}
 
-    /**
-     * Gets an object mapping field names to a {@link boolean} indicating whether the
-     * bit is available.
-     * @param {...*} hasParams Additional parameters for the has method, if any
-     * @returns {Object}
-     */
-    serialize() {
+  /**
+   * Gets an object mapping field names to a {@link boolean} indicating whether the
+   * bit is available.
+   * @param {...*} hasParams Additional parameters for the has method, if any
+   * @returns {Object}
+   */
+  serialize() {
 	  var serialized$jscomp$0 = {};
 	  var _len$jscomp$0 = arguments.length;
 	  var hasParams$jscomp$0 = Array(_len$jscomp$0);
@@ -205,57 +203,57 @@ class BitField {
 	  return serialized$jscomp$0;
 	}
 
-    /**
-     * Gets an {@link Array} of bitfield names based on the bits available.
-     * @param {...*} hasParams Additional parameters for the has method, if any
-     * @returns {string[]}
-     */
-    toArray() {
-		var _this$jscomp$0 = this;
-		var _len$jscomp$0 = arguments.length;
-		var hasParams$jscomp$0 = Array(_len$jscomp$0);
-		var _key$jscomp$0 = 0;
-		for (; _key$jscomp$0 < _len$jscomp$0; _key$jscomp$0++) {
-			hasParams$jscomp$0[_key$jscomp$0] = arguments[_key$jscomp$0];
-		}
-		return Object.keys(this.constructor.FLAGS).filter(function(bit$jscomp$0) {
-			return _this$jscomp$0.has.apply(_this$jscomp$0, [bit$jscomp$0].concat(hasParams$jscomp$0));
-		});
+  /**
+   * Gets an {@link Array} of bitfield names based on the bits available.
+   * @param {...*} hasParams Additional parameters for the has method, if any
+   * @returns {string[]}
+   */
+  toArray() {
+	  var _this$jscomp$0 = this;
+	  var _len$jscomp$0 = arguments.length;
+	  var hasParams$jscomp$0 = Array(_len$jscomp$0);
+	  var _key$jscomp$0 = 0;
+	  for (; _key$jscomp$0 < _len$jscomp$0; _key$jscomp$0++) {
+		hasParams$jscomp$0[_key$jscomp$0] = arguments[_key$jscomp$0];
+	  }
+	  return Object.keys(this.constructor.FLAGS).filter(function(bit$jscomp$0) {
+		return _this$jscomp$0.has.apply(_this$jscomp$0, [bit$jscomp$0].concat(hasParams$jscomp$0));
+	  });
 	}
 
-    toJSON() {
-        return this.bitfield;
-    }
+  toJSON() {
+    return this.bitfield;
+  }
 
-    valueOf() {
-        return this.bitfield;
-    }
+  valueOf() {
+    return this.bitfield;
+  }
 
-    *[Symbol.iterator]() {
-        yield* this.toArray();
-    }
+  *[Symbol.iterator]() {
+    yield* this.toArray();
+  }
 
-    /**
-     * Data that can be resolved to give a bitfield. This can be:
-     * * A string (see {@link BitField.FLAGS})
-     * * A bit number
-     * * An instance of BitField
-     * * An Array of BitFieldResolvable
-     * @typedef {string|number|BitField|BitFieldResolvable[]} BitFieldResolvable
-     */
+  /**
+   * Data that can be resolved to give a bitfield. This can be:
+   * * A string (see {@link BitField.FLAGS})
+   * * A bit number
+   * * An instance of BitField
+   * * An Array of BitFieldResolvable
+   * @typedef {string|number|BitField|BitFieldResolvable[]} BitFieldResolvable
+   */
 
-    /**
-     * Resolves bitfields to their numeric form.
-     * @param {BitFieldResolvable} [bit=0] - bit(s) to resolve
-     * @returns {number}
-     */
-    static resolve(bit) { bit = bit || 0;
-        if (typeof bit === 'number' && bit >= 0) return bit;
-        if (bit instanceof BitField) return bit.bitfield;
-        if (Array.isArray(bit)) return bit.map(p => this.resolve(p)).reduce((prev, p) => prev | p, 0);
-        if (typeof bit === 'string' && typeof this.FLAGS[bit] !== 'undefined') return this.FLAGS[bit];
-        throw new RangeError('Invalid bitfield flag or number.');
-    }
+  /**
+   * Resolves bitfields to their numeric form.
+   * @param {BitFieldResolvable} [bit=0] - bit(s) to resolve
+   * @returns {number}
+   */
+  static resolve(bit) { bit=bit||0;
+    if (typeof bit === 'number' && bit >= 0) return bit;
+    if (bit instanceof BitField) return bit.bitfield;
+    if (Array.isArray(bit)) return bit.map(p => this.resolve(p)).reduce((prev, p) => prev | p, 0);
+    if (typeof bit === 'string' && typeof this.FLAGS[bit] !== 'undefined') return this.FLAGS[bit];
+    throw new RangeError('Invalid bitfield flag or number.');
+  }
 }
 
 /**
