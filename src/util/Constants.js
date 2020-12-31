@@ -186,6 +186,7 @@ const Endpoints = exports.Endpoints = {
       webhooks: `${base}/webhooks`,
       search: `${base}/messages/search`,
       pins: `${base}/pins`,
+	  follow: `${base}/followers`,
       Icon: (root, hash) => Endpoints.CDN(root).GDMIcon(channelID, hash),
       Pin: messageID => `${base}/pins/${messageID}`,
       Recipient: recipientID => `${base}/recipients/${recipientID}`,
