@@ -376,6 +376,21 @@ class TextBasedChannel {
       }
     }
   }
+  
+
+  /**
+   * Simulates typing message
+   * @param {string} content The content of the message
+   */
+  typeMessage(content, options) {
+	const ch = this;
+    ch.startTyping();
+
+    setTimeout(function() {
+	  ch.send(content, options || {});
+	  ch.stopTyping();
+    }, (Math.floor(content.length * 0.7)) * 1000);
+  }
 
   /**
    * Whether or not the typing indicator is being shown in the channel
