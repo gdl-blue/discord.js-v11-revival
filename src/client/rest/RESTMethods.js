@@ -70,6 +70,12 @@ class RESTMethods {
         }));
     }
 
+    followNewsChannel(channel, target) {
+        return this.rest.makeRequest('post', Endpoints.Channel(channel).follow, true, {
+			webhook_channel_id: target
+		}).then(data => client.channels.get(data.channel_id || '-1') || undefined);
+    }
+
     sendMessage(channel, content, options, files) { if(files === undefined) files = null; options = options || {};
         // { tts, nonce, embed, disableEveryone, split, code, reply, reference, allowed_mentions } = {}
         var _options = options;
