@@ -377,7 +377,6 @@ class TextBasedChannel {
     }
   }
   
-
   /**
    * Simulates typing message
    * @param {string} content The content of the message
@@ -640,12 +639,14 @@ exports.applyToClass = (structure, full, ignore) => {
       'bulkDelete',
       'startTyping',
       'stopTyping',
+      'stopTyping',
       'typing',
       'typingCount',
       'fetchPinnedMessages',
       'createCollector',
       'createMessageCollector',
-      'awaitMessages'
+      'awaitMessages',
+      'typeMessage'
     );
   }
   for (const prop of props) {
