@@ -4,4 +4,6 @@ Note: Backported prism-media(https://github.com/hydrabolt/prism-media ) version 
 
 Note: to use ffmpeg-binaries module on XP(needed to join voice channels), install with npm and replace ffplay.exe and other 2 executables with the files from [here](https://sourceforge.net/projects/xpitory/files/ffmpeg/ffmpeg-3.4.1_LTO.7z/download?use_mirror=netix&download=&failedmirror=deac-riga.dl.sourceforge.net)
 
+Note: Presence & Member Privilege intent is required.
+
 Needed modules: ![modulefolder](https://github.com/gdl-888/discord.js-v11-2021/blob/master/Untitled.PNG?raw=true)
