@@ -296,7 +296,7 @@ class ClientUser extends User {
    *   .then(presence => console.log(`Activity set to ${presence.game ? presence.game.name : 'none'}`))
    *   .catch(console.error);
    */
-  setActivity(name, obj) {
+  setActivity(name, obj) { obj = obj || {};
 	var _obj = obj;
 	var url = _obj.url;
 	var type = _obj.type;
