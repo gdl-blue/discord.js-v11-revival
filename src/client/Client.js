@@ -468,14 +468,14 @@ class Client extends EventEmitter {
                     if(param.includes(':')) {
                         key = param.split(':')[0];
                         val = param.replace(key + ':', '');
-                        if(val.includes(' ') && val.startsWith('"') && val.endsWith('"')) {
+                        if(val.startsWith('"') && val.endsWith('"')) {
                             val = val.replace('"', '').replace(/["]$/, '');
                         }
                     }
                     else if(param.includes('=')) {
                         key = param.split('=')[0];
                         val = param.replace(key + '=', '');
-                        if(val.includes(' ') && val.startsWith('"') && val.endsWith('"')) {
+                        if(val.startsWith('"') && val.endsWith('"')) {
                             val = val.replace('"', '').replace(/["]$/, '');
                         }
                     } else {
