@@ -451,6 +451,7 @@ class Client extends EventEmitter {
                         for(let k of this.keys()) {
                             if(k.toUpperCase() == key.toUpperCase()) return this.get(k);
                         }
+						return undefined;
                     }
                 };
                 
@@ -485,7 +486,7 @@ class Client extends EventEmitter {
                     params.set(key, val);
                 }
                 
-                cb(params, cmd);
+                cb(params, msg, cmd);
             }
         });
     }
