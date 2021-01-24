@@ -179,7 +179,7 @@ class Client extends EventEmitter {
     }
     
     get servers() {
-	    return this.guilds;
+        return this.guilds;
     }
 
     /**
@@ -416,6 +416,79 @@ class Client extends EventEmitter {
         if (id !== '@me') process.emitWarning('fetchApplication: use "@me" as an argument', 'DeprecationWarning');
         return this.rest.methods.getApplication(id);
     }
+    
+    command(cmd, cb) {
+        this.on('message', msg => {
+            if(msg.content.split(/\s/)[0].toUpperCase() == ((this.options.prefix || '') + cmd).toUpperCase()) {
+                const Collection = require('../util/Collection');
+                const __params = msg.content.match(/(?:[^\s"]+|"[^"]*")+/g);  // https://stackoverflow.com/questions/16261635/
+                const _params = [ __params[0] ];
+                // -rf >>> -r -f
+                for(let idx=1; idx<__params.length; idx++) {
+                    const item = __params[idx];
+                    if(item.startsWith('-') && !item.startsWith('--') && item.length >= 3) {
+                        var val; if(item.includes('=')) val = item.replace(item.split('=')[0] + '=', '');
+                        for(let ci=1; ci<item.split('=')[0].length; ci++) {
+                            let chr = item[ci];
+                            _params.push('-' + chr + (val !== undefined ? ('=' + val) : ''));
+                        }
+                    } else _params.push(item);
+                }
+                const command = _params[0];
+                
+                class Parameters extends Collection {
+                    constructor(x) {
+                        super(x);
+                    }
+                    
+                    has(key) {
+                        for(let k of this.keys()) {
+                            if(k.toUpperCase() == key.toUpperCase()) return true;
+                        } return false;
+                    }
+                    
+                    value(key) {
+                        for(let k of this.keys()) {
+                            if(k.toUpperCase() == key.toUpperCase()) return this.get(k);
+                        }
+                    }
+                };
+                
+                const params = new Parameters();
+                for(let idx=1; idx<_params.length; idx++) {
+                    const param = _params[idx].replace(/^\//, '').replace(/^[-][-]/, '').replace(/^[-]/, '');
+                    
+                    // cmd /param:value
+                    // cmd --param=value
+                    // cmd -p=value
+                    
+                    let key, val;
+                    
+                    if(param.includes(':')) {
+                        key = param.split(':')[0];
+                        val = param.replace(key + ':', '');
+                        if(val.includes(' ') && val.startsWith('"') && val.endsWith('"')) {
+                            val = val.replace('"', '').replace(/["]$/, '');
+                        }
+                    }
+                    else if(param.includes('=')) {
+                        key = param.split('=')[0];
+                        val = param.replace(key + '=', '');
+                        if(val.includes(' ') && val.startsWith('"') && val.endsWith('"')) {
+                            val = val.replace('"', '').replace(/["]$/, '');
+                        }
+                    } else {
+                        key = param;
+                        val = true;
+                    }
+                    
+                    params.set(key, val);
+                }
+                
+                cb(params, cmd);
+            }
+        });
+    }
 
     /**
      * Generates a link that can be used to invite the bot to a guild.
@@ -433,8 +506,8 @@ class Client extends EventEmitter {
             `https://discord.com/oauth2/authorize?client_id=${application.id}&permissions=${permissions}&scope=bot`
         );
     }
-	
-	startTyping(channel, count) {
+    
+    startTyping(channel, count) {
         if (typeof count !== 'undefined' && count < 1) throw new RangeError('Count must be at least 1.');
         if (!this.user._typing.has(channel.id)) {
             this.user._typing.set(channel.id, {
@@ -468,21 +541,21 @@ class Client extends EventEmitter {
      * @param {...*} args Arguments for the function
      * @returns {Timeout}
      */
-	setTimeout(action, interval) {
-		var _len = arguments.length;
-		var args = Array(_len > 2 ? _len - 2 : 0);
-		var _key = 2;
-		for (; _key < _len; _key++) {
-			args[_key - 2] = arguments[_key];
-		}
-		var self = this;
-		var i = setTimeout(function() {
-			action.apply(undefined, args);
-			self._timeouts.delete(i);
-		}, interval);
-		this._timeouts.add(i);
-		return i;
-	}
+    setTimeout(action, interval) {
+        var _len = arguments.length;
+        var args = Array(_len > 2 ? _len - 2 : 0);
+        var _key = 2;
+        for (; _key < _len; _key++) {
+            args[_key - 2] = arguments[_key];
+        }
+        var self = this;
+        var i = setTimeout(function() {
+            action.apply(undefined, args);
+            self._timeouts.delete(i);
+        }, interval);
+        this._timeouts.add(i);
+        return i;
+    }
 
     /**
      * Clears a timeout.
@@ -501,16 +574,16 @@ class Client extends EventEmitter {
      * @returns {Timeout}
      */
     setInterval(fn, timeout) {
-	  var _len = arguments.length;
-	  var constructorArgs = Array(_len > 2 ? _len - 2 : 0);
-	  var _key = 2;
-	  for (; _key < _len; _key++) {
-		constructorArgs[_key - 2] = arguments[_key];
-	  }
-	  var id = setInterval.apply(undefined, [fn, timeout].concat(constructorArgs));
-	  this._intervals.add(id);
-	  return id;
-	}
+      var _len = arguments.length;
+      var constructorArgs = Array(_len > 2 ? _len - 2 : 0);
+      var _key = 2;
+      for (; _key < _len; _key++) {
+        constructorArgs[_key - 2] = arguments[_key];
+      }
+      var id = setInterval.apply(undefined, [fn, timeout].concat(constructorArgs));
+      this._intervals.add(id);
+      return id;
+    }
 
     /**
      * Clears an interval.
@@ -563,7 +636,7 @@ class Client extends EventEmitter {
      * @private
      */
     _validateOptions(options) { // eslint-disable-line complexity
-		options=options||this.options;
+        options=options||this.options;
         if (typeof options.shardCount !== 'number' || isNaN(options.shardCount)) {
             throw new TypeError('The shardCount option must be a number.');
         }
