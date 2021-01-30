@@ -1,9 +1,19 @@
 'use strict';
 
-if(!process.emitWarning) {
-	process.emitWarning = function(msg) {
+if(!Array.prototype.includes) {
+	Array.prototype.includes = (function(fnd) {
+		for(let item of this) {
+			if(item == fnd) return 1;
+		}
 		
-	};
+		return 0;
+	});
+}
+
+if(!process.emitWarning) {
+	process.emitWarning = (function(msg) {
+		
+	});
 }
 
 const Util = require('./util/Util');
