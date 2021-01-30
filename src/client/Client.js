@@ -443,47 +443,60 @@ class Client extends EventEmitter {
                     
                     has(key) {
                         for(let k of this.keys()) {
-                            if(k.toUpperCase() == key.toUpperCase()) return true;
+                            if((typeof(k) == 'string' ? k.toUpperCase() : k) == (typeof(key) == 'string' ? key.toUpperCase() : key)) return true;
                         } return false;
                     }
                     
                     value(key) {
                         for(let k of this.keys()) {
-                            if(k.toUpperCase() == key.toUpperCase()) return this.get(k);
+                            if((typeof(k) == 'string' ? k.toUpperCase() : k) == (typeof(key) == 'string' ? key.toUpperCase() : key)) return this.get(k);
                         }
 						return undefined;
                     }
                 };
+				
+				let multiparams = [];
                 
                 const params = new Parameters();
-                for(let idx=1; idx<_params.length; idx++) {
-                    const param = _params[idx].replace(/^\//, '').replace(/^[-][-]/, '').replace(/^[-]/, '');
+                for(let idx=1, np=1; idx<_params.length; idx++) {
+                    const _param = _params[idx];
+					const param = _param.replace(/^\//, '').replace(/^[-][-]/, '').replace(/^[-]/, '')
                     
-                    // cmd /param:value
-                    // cmd --param=value
-                    // cmd -p=value
+					// MS-DOS 방식 - cmd /param value (이건 만들기 귀찮음)
+                    // MS-DOS 방식 - cmd /param:value
+                    // 리눅스 방식 - cmd --param=value
+                    // 리눅스 방식 - cmd -p=value
                     
                     let key, val;
                     
-                    if(param.includes(':')) {
+                    if(param.includes(':') && _param.startsWith('/')) {
                         key = param.split(':')[0];
                         val = param.replace(key + ':', '');
                         if(val.startsWith('"') && val.endsWith('"')) {
                             val = val.replace('"', '').replace(/["]$/, '');
                         }
-                    }
-                    else if(param.includes('=')) {
+                    } else if(param.includes('=') && _param.startsWith('-')) {
                         key = param.split('=')[0];
                         val = param.replace(key + '=', '');
                         if(val.startsWith('"') && val.endsWith('"')) {
                             val = val.replace('"', '').replace(/["]$/, '');
                         }
-                    } else {
+                    } else if(_param.startsWith('/') || _param.startsWith('-')) {
                         key = param;
                         val = true;
-                    }
+                    } else {
+						key = np++;
+						val = param;
+					}
                     
-                    params.set(key, val);
+					let cv = params.get(key);
+					if(cv && !(multiparams.includes(key))) {
+						multiparams.push(key);
+						params.set(key, [cv, val]);
+					} else if(cv && cv instanceof Array) {
+						cv.push(val);
+						params.set(key, cv);
+					} else params.set(key, val);
                 }
                 
                 cb(params, msg, cmd);
