@@ -193,7 +193,7 @@ class TextBasedChannel {
    *   .catch(console.error);
    */
   fetchMessage(messageID) {
-    if (!this.client.user.bot) {
+    if (1 || !this.client.user.bot) {
       return this.fetchMessages({ limit: 1, around: messageID }).then(messages => {
         const msg = messages.get(messageID);
         if (!msg) throw new Error('Message not found.');
@@ -646,7 +646,7 @@ exports.applyToClass = (structure, full, ignore) => {
       'createCollector',
       'createMessageCollector',
       'awaitMessages',
-      'typeMessage'
+	  'typeMessage'
     );
   }
   for (const prop of props) {

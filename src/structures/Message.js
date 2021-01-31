@@ -58,13 +58,13 @@ class Message {
          * The content of the message
          * @type {string}
          */
-        this.content = data.content;
+        this.content = data.content || null;
 
         /**
          * The author of the message
          * @type {User}
          */
-        this.author = this.client.dataManager.newUser(data.author, !data.webhook_id);
+        this.author = data.author ? this.client.dataManager.newUser(data.author, !data.webhook_id) : null;
 
         /**
          * Whether or not this message is pinned
@@ -96,15 +96,19 @@ class Message {
          * A list of embeds in the message - e.g. YouTube Player
          * @type {MessageEmbed[]}
          */
-        this.embeds = data.embeds.map(e => new Embed(this, e));
+        this.embeds = data.embeds ? data.embeds.map(e => new Embed(this, e)) : null;
 
         /**
          * A collection of attachments in the message - e.g. Pictures - mapped by their ID
          * @type {Collection<Snowflake, MessageAttachment>}
          */
-        this.attachments = new Collection();
-        for (const attachment of data.attachments) this.attachments.set(attachment.id, new Attachment(this, attachment));
-
+		if(data.attachments) {
+			this.attachments = new Collection();
+			for(const attachment of data.attachments) this.attachments.set(attachment.id, new Attachment(this, attachment));
+		} else {
+			this.attachments = null;
+		}
+		
         /**
          * The timestamp the message was sent at
          * @type {number}
@@ -573,6 +577,15 @@ class Message {
         content = omq + `${this.member} ${content}`;
         return this.channel.send(content, options);
     }
+	
+	// https://github.com/discordjs/discord.js/blob/master/src/structures/Message.js
+	get partial() {
+		return typeof this.content !== 'string' || !this.author;
+	}
+	
+	fetch(force) {
+		return this.channel.fetchMessage(this.id);
+	}
 
     /**
      * Marks the message as read.

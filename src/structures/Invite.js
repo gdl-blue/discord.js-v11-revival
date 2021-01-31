@@ -104,11 +104,6 @@ class Invite {
      * @type {number}
      */
     this.createdTimestamp = new Date(data.created_at).getTime();
-	
-	if(data.approximate_presence_count || data.approximate_member_count) {
-		this.persenceCount = data.approximate_presence_count;
-		this.memberCount   = data.approximate_member_count;
-	}
   }
 
   /**

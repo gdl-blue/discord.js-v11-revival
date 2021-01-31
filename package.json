@@ -199,7 +199,7 @@
     "webpack": "parallel-webpack"
   },
   "types": "./typings/index.d.ts",
-  "version": "11.10.0",
+  "version": "11.13.0",
   "warnings": [
     {
       "code": "ENOTSUP",

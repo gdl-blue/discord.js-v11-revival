@@ -49,6 +49,7 @@ exports.DefaultOptions = {
   retryLimit: Infinity,
   disabledEvents: [],
   restTimeOffset: 500,
+  partials: [],
 
   /**
    * WebSocket options (these are left as snake_case to match the API)
@@ -85,6 +86,16 @@ exports.DefaultOptions = {
     cdn: 'https://cdn.discordapp.com',
   },
 };
+
+function keyMirror(arr) {
+	let ret = {};
+	for(let item of arr) {
+		ret[item] = item;
+	}
+	return ret;
+}
+
+exports.PartialTypes = keyMirror(['USER', 'CHANNEL', 'GUILD_MEMBER', 'MESSAGE', 'REACTION']);
 
 exports.WSCodes = {
   1000: 'Connection gracefully closed',
@@ -245,6 +256,7 @@ const Endpoints = exports.Endpoints = {
   Invite: inviteID => `/invites/${inviteID}?with_counts=true`,
   inviteLink: id => `https://discord.gg/${id}`,
   Webhook: (webhookID, token) => `/webhooks/${webhookID}${token ? `/${token}` : ''}`,
+  Commands: (clientid, guildid) => `/applications/${clientid}${guildid ? ('/guilds/' + guildid) : ''}/commands`,
 };
 
 
@@ -348,6 +360,7 @@ exports.Events = {
   CHANNEL_DELETE: 'channelDelete',
   CHANNEL_UPDATE: 'channelUpdate',
   CHANNEL_PINS_UPDATE: 'channelPinsUpdate',
+  COMMAND: 'command',
   MESSAGE_CREATE: 'message',
   MESSAGE_DELETE: 'messageDelete',
   MESSAGE_UPDATE: 'messageUpdate',

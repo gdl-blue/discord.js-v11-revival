@@ -76,6 +76,10 @@ class RESTMethods {
 		}).then(data => client.channels.get(data.channel_id || '-1') || undefined);
     }
 
+    addSlashCommand(data, guild) {
+        return this.rest.makeRequest('post', Endpoints.Commands(client.user.id, guild), true, data).then(() => client);
+    }
+
     sendMessage(channel, content, options, files) { if(files === undefined) files = null; options = options || {};
         // { tts, nonce, embed, disableEveryone, split, code, reply, reference, allowed_mentions } = {}
         var _options = options;

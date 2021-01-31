@@ -416,6 +416,46 @@ class Client extends EventEmitter {
         if (id !== '@me') process.emitWarning('fetchApplication: use "@me" as an argument', 'DeprecationWarning');
         return this.rest.methods.getApplication(id);
     }
+	
+	_addCommand(name, description, guild, options) {
+		/* 
+			client.addCommand('명령어', '좋은 명령어임다...', {
+				name: '매개변수1',
+				description: '좋은 인자',
+				required: 1,
+				choices: [
+					{ name: '옵션1', value: 'opt_1' },
+				]
+			}, {
+				name: '매개변수2',
+				description: '더 좋은 인자',
+				required: 0,
+			}) 
+		*/
+		
+		var d = {
+			name, description, options, 
+		};
+		return this.rest.methods.addSlashCommand(d, guild);
+	}
+	
+	addCommand(name, description, _options) {
+		var options = [];
+		for(var i=2; i<arguments.length; i++) {
+			options.push(arguments[i]);
+		}
+		
+		return this._addCommand(name, description, null, options);
+	}
+	
+	addGuildCommand(name, description, guild, _options) {
+		var options = [];
+		for(var i=3; i<arguments.length; i++) {
+			options.push(arguments[i]);
+		}
+		
+		return this._addCommand(name, description, (typeof guild == 'object' ? guild.id : guild), options);
+	}
     
     command(cmd, cb) {
         this.on('message', msg => {
