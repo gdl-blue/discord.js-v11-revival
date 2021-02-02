@@ -456,9 +456,15 @@ class Client extends EventEmitter {
 		
 		return this._addCommand(name, description, (typeof guild == 'object' ? guild.id : guild), options);
 	}
+	
+	_addGuildCommand(name, description, guild, options) {
+		return this._addCommand(name, description, (typeof guild == 'object' ? guild.id : guild), options);
+	}
     
     command(cmd, cb) {
         this.on('message', msg => {
+			if(msg.partial) return;
+			
             if(msg.content.split(/\s/)[0].toUpperCase() == ((this.options.prefix || '') + cmd).toUpperCase()) {
                 const Collection = require('../util/Collection');
                 const __params = msg.content.match(/(?:[^\s"]+|"[^"]*")+/g);  // https://stackoverflow.com/questions/16261635/
@@ -497,13 +503,15 @@ class Client extends EventEmitter {
 				
 				let multiparams = [];
                 
-                const params = new Parameters();
+                const params = new Parameters;
                 for(let idx=1, np=1; idx<_params.length; idx++) {
                     const _param = _params[idx];
 					const param = _param.replace(/^\//, '').replace(/^[-][-]/, '').replace(/^[-]/, '')
                     
 					// MS-DOS 방식 - cmd /param value (이건 만들기 귀찮음)
                     // MS-DOS 방식 - cmd /param:value
+                    // 리눅스 방식 - cmd --param value (귀찮음)
+                    // 리눅스 방식 - cmd -p value (귀찮음)
                     // 리눅스 방식 - cmd --param=value
                     // 리눅스 방식 - cmd -p=value
                     

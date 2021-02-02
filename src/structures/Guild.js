@@ -898,6 +898,15 @@ class Guild {
       this.client.setTimeout(() => reject(new Error('Members didn\'t arrive in time.')), 120 * 1000);
     });
   }
+  
+  addCommand(name, description, _options) {
+    var options = [];
+    for(var i=2; i<arguments.length; i++) {
+      options.push(arguments[i]);
+    }
+
+    this.client.addGuildCommand(name, description, this.id, options)
+  }
 
   /**
    * Performs a search within the entire guild.

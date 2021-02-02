@@ -81,6 +81,7 @@ module.exports = {
   ReactionCollector: require('./structures/ReactionCollector'),
   RichEmbed: require('./structures/RichEmbed'),
   Role: require('./structures/Role'),
+  Sticker: require('./structures/Sticker'),
   StoreChannel: require('./structures/StoreChannel'),
   TextChannel: require('./structures/TextChannel'),
   User: require('./structures/User'),

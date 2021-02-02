@@ -11,6 +11,7 @@ const Collection = require('../util/Collection');
 const Constants = require('../util/Constants');
 const Permissions = require('../util/Permissions');
 const MessageFlags = require('../util/MessageFlags');
+const Sticker = require('../structures/Sticker');
 let GuildMember;
 
 /**
@@ -47,12 +48,14 @@ class Message {
          * @type {Snowflake}
          */
         this.id = data.id;
+		
+		this.inlineReply = (data.type == 19);
 
         /**
          * The type of the message
          * @type {MessageType}
          */
-        this.type = Constants.MessageTypes[data.type];
+        this.type = Constants.MessageTypes[(data.type == 19 ? 0 : data.type)];
 
         /**
          * The content of the message
@@ -156,6 +159,11 @@ class Message {
          * @type {Readonly<MessageFlags>}
          */
         this.flags = new MessageFlags(data.flags).freeze();
+		
+		this.stickers = new Collection;
+		for(let sticker of (data.stickers || [])) {
+			this.stickers.set(sticker.id, new Sticker(sticker));
+		}
 
         /**
          * Reference data sent in a crossposted message.
@@ -193,6 +201,23 @@ class Message {
          */
         this.member = this.guild ? this.guild.member(this.author) || null : null;
     }
+	
+	fetchReference() {
+		if(this.reference) {
+			const msgid  = this.reference.messageID;
+			const cached = this.channel.messages.get(msgid);
+			
+			if(cached) return Promise.resolve(cached);
+			return this.channel.fetchMessage(msgid);
+		}
+		
+		return Promise.reject(Error('No reference in this message.'));
+	}
+	
+	getReference() {
+		if(!this.reference) throw Error('No reference.');
+		return this.channel.messages.get(this.reference.messageID);
+	}
 
     /**
      * Updates the message.
