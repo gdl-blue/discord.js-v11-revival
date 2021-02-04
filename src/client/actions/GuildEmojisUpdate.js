@@ -4,7 +4,21 @@ const Action = require('./Action');
 
 function mappify(iterable) {
   const map = new Map();
-  for (const x of iterable) map.set(...x);
+  var _map;
+	function _toConsumableArray(arr) {
+	  if (Array.isArray(arr)) {
+		var i = 0;
+		var arr2 = Array(arr.length);
+		for (; i < arr.length; i++) {
+		  arr2[i] = arr[i];
+		}
+		return arr2;
+	  } else {
+		return Array.from(arr);
+	  }
+	}
+	
+  for (const x of iterable) (_map = map).set.apply(_map, _toConsumableArray(x));
   return map;
 }
 
