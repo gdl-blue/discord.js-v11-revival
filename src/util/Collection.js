@@ -48,7 +48,24 @@ class Collection extends Map {
    * @returns {Array}
    */
   array() {
-    if (!this._array || this._array.length !== this.size) this._array = [...this.values()];
+    // if (!this._array || this._array.length !== this.size) this._array = [...this.values()];
+	function _toConsumableArray(arr) {
+	  if (Array.isArray(arr)) {
+		var i = 0;
+		var arr2 = Array(arr.length);
+		for (; i < arr.length; i++) {
+		  arr2[i] = arr[i];
+		}
+		return arr2;
+	  } else {
+		return Array.from(arr);
+	  }
+	}
+	
+	if (!this._array || this._array.length !== this.size) {
+	  this._array = [].concat(_toConsumableArray(this.values()));
+	}
+	
     return this._array;
   }
 
@@ -60,8 +77,23 @@ class Collection extends Map {
    * @returns {Array}
    */
   keyArray() {
-    if (!this._keyArray || this._keyArray.length !== this.size) this._keyArray = [...this.keys()];
-    return this._keyArray;
+    // if (!this._keyArray || this._keyArray.length !== this.size) this._keyArray = [...this.keys()];
+    function _toConsumableArray(arr) {
+	  if (Array.isArray(arr)) {
+		var i = 0;
+		var arr2 = Array(arr.length);
+		for (; i < arr.length; i++) {
+		  arr2[i] = arr[i];
+		}
+		return arr2;
+	  } else {
+		return Array.from(arr);
+	  }
+	}
+	  if (!this._keyArray || this._keyArray.length !== this.size) {
+		this._keyArray = [].concat(_toConsumableArray(this.keys()));
+	  }
+	return this._keyArray;
   }
 
   /**
@@ -583,7 +615,22 @@ class Collection extends Map {
    * @returns {Collection}
    */
   sort(compareFunction) { compareFunction=compareFunction||((x, y) => +(x > y) || +(x === y) - 1);
-    return new Collection([...this.entries()].sort((a, b) => compareFunction(a[1], b[1], a[0], b[0])));
+    // return new Collection([...this.entries()].sort((a, b) => compareFunction(a[1], b[1], a[0], b[0])));
+	function _toConsumableArray(arr) {
+	  if (Array.isArray(arr)) {
+		var i = 0;
+		var arr2 = Array(arr.length);
+		for (; i < arr.length; i++) {
+		  arr2[i] = arr[i];
+		}
+		return arr2;
+	  } else {
+		return Array.from(arr);
+	  }
+	}
+	  return new Collection([].concat(_toConsumableArray(this.entries())).sort(function(a, b) {
+		return compareFunction(a[1], b[1], a[0], b[0]);
+	  }));
   }
 }
 
