@@ -228,7 +228,25 @@ class Webhook extends EventEmitter {
       for (const embed of options.embeds) {
         if (embed.file) files.push(embed.file);
       }
-      if (options.files) options.files.push(...files);
+	  var _options$files;
+		function _toConsumableArray(arr) {
+		  if (Array.isArray(arr)) {
+			var i = 0;
+			var arr2 = Array(arr.length);
+			for (; i < arr.length; i++) {
+			  arr2[i] = arr[i];
+			}
+			return arr2;
+		  } else {
+			return Array.from(arr);
+		  }
+		}
+		
+		// 노드5에서 ...[1, 2, 3] 문법이 부분적으로 될 줄이양;;;
+		if (options.files) {
+		  (_options$files = options.files).push.apply(_options$files, _toConsumableArray(files));
+		}
+      // if (options.files) options.files.push(...files);
       else options.files = files;
     }
 
