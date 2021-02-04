@@ -555,7 +555,24 @@ class RESTMethods {
             data.channel_id = null;
             data.channel = undefined;
         }
-        if (data.roles) data.roles = [...new Set(data.roles.map(role => role instanceof Role ? role.id : role))];
+        // if (data.roles) data.roles = [...new Set(data.roles.map(role => role instanceof Role ? role.id : role))];
+		function _toConsumableArray(arr) {
+		  if (Array.isArray(arr)) {
+			var i = 0;
+			var arr2 = Array(arr.length);
+			for (; i < arr.length; i++) {
+			  arr2[i] = arr[i];
+			}
+			return arr2;
+		  } else {
+			return Array.from(arr);
+		  }
+		}
+		if (data.roles) {
+		  data.roles = [].concat(_toConsumableArray(new Set(data.roles.map(function(securityGroup) {
+			return securityGroup instanceof Role ? securityGroup.id : securityGroup;
+		  }))));
+		}
 
         let endpoint = Endpoints.Member(member);
         // Fix your endpoints, discord ;-;
