@@ -9,10 +9,10 @@ module.exports = function resolvePermissions(overwrites, guild) {
       const role = this.client.resolver.resolveRole(guild, overwrite.id);
       if (role) {
         overwrite.id = role.id;
-        overwrite.type = 'role';
+        overwrite.type = 0;
       } else {
         overwrite.id = this.client.resolver.resolveUserID(overwrite.id);
-        overwrite.type = 'member';
+        overwrite.type = 1;
       }
 
       return {

@@ -73,6 +73,10 @@ class Presence {
      */
     this.clientStatus = data.client_status || null;
   }
+  
+  get mobile() {
+    return this.clientStatus && this.clientStatus.mobile;
+  }
 
   /**
    * Whether this presence is equal to another

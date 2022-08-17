@@ -12,6 +12,7 @@ const Constants = require('../util/Constants');
 const Permissions = require('../util/Permissions');
 const MessageFlags = require('../util/MessageFlags');
 const Sticker = require('../structures/Sticker');
+// const DMChannel = require('../structures/DMChannel');
 let GuildMember;
 
 /**
@@ -55,7 +56,7 @@ class Message {
          * The type of the message
          * @type {MessageType}
          */
-        this.type = Constants.MessageTypes[(data.type == 19 ? 0 : data.type)];
+        this.type = Constants.MessageTypes[(data.type)];
 
         /**
          * The content of the message
@@ -93,7 +94,7 @@ class Message {
          * Whether or not this message was sent by Discord, not actually a user (e.g. pin notifications)
          * @type {boolean}
          */
-        this.system = data.type !== 0;
+        this.system = !([0, 19].includes(data.type));
 
         /**
          * A list of embeds in the message - e.g. YouTube Player
@@ -296,7 +297,7 @@ class Message {
      * @readonly
      */
     get cleanContent() {
-        return this.content
+        return (this.content || '')
             .replace(/@(everyone|here)/g, '@\u200b$1')
             .replace(/<@!?[0-9]+>/g, input => {
                 const id = input.replace(/<|!|>|@/g, '');
@@ -371,6 +372,77 @@ class Message {
             });
         });
     }
+	
+	/**
+	 * sends a reply message, and waits for the user to reply to the bot
+	 * @param {string} what the bot will send
+	 * @param {function} callback function which will be called when the user replies
+	 * @example
+	 * client.on('message', msg => {
+           msg.awaitReply('1 + 2 = ? \n send the answer now', msg => {
+               if(msg.content == 3) msg.reply('good');
+               else msg.reply('bad');
+           });
+       });
+	 */
+	awaitReply(prpt, cb) {
+		const msgid = this.id;
+		const message = this;
+		let user = this.author;
+		
+		this.reply2(prpt);
+		
+		this.client.on('message', msg => {
+			if(user && msg.author.id != user.id) return;
+			if(msg.channel != message.channel) return;
+			cb(msg);
+		});
+	}
+	
+	/**
+	 * Alias of <Message>.awaitReply;
+	 */
+	waitReply() {
+		return this.awaitReply.apply(this, arguments);
+	}
+	
+	/**
+	 * Alias of <Message>.awaitReply;
+	 */
+	waitForReply() {
+		return this.awaitReply.apply(this, arguments);
+	}
+	
+	/**
+	 * Alias of <Message>.awaitReply;
+	 */
+	onreply() {
+		return this.awaitReply.apply(this, arguments);
+	}
+	
+	/**
+	 * Alias of <Message>.awaitReply;
+	 */
+	onReply() {
+		return this.awaitReply.apply(this, arguments);
+	}
+	
+	/**
+	 * same as awaitReply but waits for the user to reply via DM
+	 */
+	awaitDMReply(prpt, cb) {
+		const msgid = this.id;
+		const message = this;
+		let user = this.author;
+		
+		this.reply2(prpt);
+		
+		this.client.on('message', msg => {
+			if(!(msg.channel instanceof DMChannel)) return;
+			if(msg.channel.recipient != user) return;
+			cb(msg);
+		});
+	}
 
     /**
      * An array of cached versions of the message, including the current version
@@ -469,6 +541,10 @@ class Message {
         if (options instanceof RichEmbed) options = { embed: options };
         return this.client.rest.methods.updateMessage(this, content, options);
     }
+	
+	thread(name, timeout) {
+		return this.client.rest.methods.startPublicThread(this, name, timeout);
+	}
 
     /**
      * Edit the content of the message, with a code block.
@@ -582,7 +658,7 @@ class Message {
             guild_id:   this.guild.id
         };
         
-        if(ping == 0) {  // false == 0 is true
+        if(ping == 0) {
             options.allowed_mentions = {
                 parse: ["users", "roles", "everyone"],
                 replied_user: false
@@ -677,6 +753,10 @@ class Message {
 
         return equal;
     }
+	
+	send() {
+		return this.channel.send.apply(this, arguments);
+	}
 
     /**
      * When concatenated with a string, this automatically concatenates the message's content instead of the object.

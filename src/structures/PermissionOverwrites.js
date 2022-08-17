@@ -29,7 +29,15 @@ class PermissionOverwrites {
      * The type of this overwrite
      * @type {string}
      */
-    this.type = data.type == 0 ? 'role' : 'member';
+    this.type = data.type == 1 ? 'member' : 'role';
+	
+	this.role = null, this.member = null;
+	if(this.type == 'role' && this.channel && this.channel.guild && this.channel.guild.roles) {
+		this.role = (this.channel.guild.roles.find(r => r.id == this.id)) || null;
+	}
+	if(this.type == 'member' && this.channel && this.channel.guild && this.channel.guild.members) {
+		this.member = (this.channel.guild.members.find(m => m.id == this.id)) || null;
+	}
 
     /**
      * The permissions that are denied for the user or role as a bitfield.

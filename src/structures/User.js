@@ -47,6 +47,9 @@ class User {
      * @type {string}
      */
     this.avatar = data.avatar;
+	
+    this.banner = data.banner;
+    this.accent = data.accent_color;
 
     /**
      * Whether or not the user is a bot

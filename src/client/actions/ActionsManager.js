@@ -5,6 +5,7 @@ class ActionsManager {
     this.client = client;
 
     this.register(require('./MessageCreate'));
+    this.register(require('./InteractionCreate'));
     this.register(require('./MessageDelete'));
     this.register(require('./MessageDeleteBulk'));
     this.register(require('./MessageUpdate'));
@@ -26,6 +27,7 @@ class ActionsManager {
     this.register(require('./InviteCreate'));
     this.register(require('./InviteDelete'));
     this.register(require('./UserGet'));
+    this.register(require('./ChannelGet'));
     this.register(require('./UserUpdate'));
     this.register(require('./UserNoteUpdate'));
     this.register(require('./GuildSync'));

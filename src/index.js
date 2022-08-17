@@ -1,20 +1,44 @@
 'use strict';
 
 if(!Array.prototype.includes) {
-	Array.prototype.includes = (function(fnd) {
-		for(let item of this) {
-			if(item == fnd) return 1;
-		}
-		
-		return 0;
-	});
+    Array.prototype.includes = (function(fnd) {
+        for(let item of this) {
+            if(item == fnd) return 1;
+        }
+        
+        return 0;
+    });
 }
 
 if(!process.emitWarning) {
-	process.emitWarning = (function(msg) {
-		
-	});
+    process.emitWarning = (function(msg) {
+        
+    });
 }
+
+/*
+if(process.versions.node.split('.')[0] < 6) {
+    // Unhandled promise rejection warning
+    Promise.prototype._catchCount = 0;
+    Promise.prototype._catch = Promise.prototype.catch;
+    
+    Promise.prototype.catch = (function(fn) {
+        this._catchCount++;
+        return Promise.prototype._catch.apply(this, arguments);
+    });
+    
+    var _Promise = Promise;
+    function Promise(fn) {
+        var pr = new _Promise(fn);
+        pr.catch(e => {
+            if(pr._catchCount <= 1) {
+                console.error('Unhandled promise Rejection: ' + (e.stack || e));
+            }
+        });
+        return pr;
+    }
+}
+*/
 
 const Util = require('./util/Util');
 
@@ -70,6 +94,11 @@ module.exports = {
   MessageEmbed: require('./structures/MessageEmbed'),
   MessageMentions: require('./structures/MessageMentions'),
   MessageReaction: require('./structures/MessageReaction'),
+  Component: require('./structures/Component'),
+  ActionRow: require('./structures/ActionRow'),
+  Button: require('./structures/Button'),
+  SelectMenu: require('./structures/SelectMenu'),
+  SelectOption: require('./structures/SelectOption'),
   NewsChannel: require('./structures/NewsChannel'),
   OAuth2Application: require('./structures/OAuth2Application'),
   ClientOAuth2Application: require('./structures/OAuth2Application'),

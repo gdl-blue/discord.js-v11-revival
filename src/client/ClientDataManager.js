@@ -80,7 +80,7 @@ class ClientDataManager {
             break;
         }
 
-        guild.channels.set(channel.id, channel);
+        try { guild.channels.set(channel.id, channel); } catch(e) {}
       }
     }
 

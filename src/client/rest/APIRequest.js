@@ -40,9 +40,9 @@ class APIRequest {
     const apiRequest = request[this.method](`${API}${this.path}`);
     if (this.auth) apiRequest.set('authorization', this.getAuth());
 	if (this.reason) apiRequest.set('X-Audit-Log-Reason', encodeURIComponent(this.reason));
-    if (this.file && this.file.file) {
-      apiRequest.attach('file', this.file.file, this.file.name);
-      this.data = this.data || {};
+    if (this.files) {
+      for (const file of this.files) if (file && file.file) apiRequest.attach('file', file.file, file.name);
+	  this.data = this.data || {};
       apiRequest.field('payload_json', JSON.stringify(this.data));
     } else if (this.data) {
       apiRequest.send(this.data);

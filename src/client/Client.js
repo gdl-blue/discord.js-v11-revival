@@ -13,8 +13,11 @@ const WebSocketManager = require('./websocket/WebSocketManager');
 const ActionsManager = require('./actions/ActionsManager');
 const Collection = require('../util/Collection');
 const Presence = require('../structures/Presence').Presence;
+const Guild = require('../structures/Guild');
 const ShardClientUtil = require('../sharding/ShardClientUtil');
 const VoiceBroadcast = require('./voice/VoiceBroadcast');
+
+const UserManager = require('./UserManager');
 
 /**
  * The main hub for interacting with the Discord API, and the starting point for any bot.
@@ -30,7 +33,9 @@ class Client extends EventEmitter {
         // Obtain shard details from environment
         if (!options.shardId && 'SHARD_ID' in process.env) options.shardId = Number(process.env.SHARD_ID);
         if (!options.shardCount && 'SHARD_COUNT' in process.env) options.shardCount = Number(process.env.SHARD_COUNT);
-
+		
+		if(options.intents) Constants.DefaultOptions.ws.intents = options.intents;
+		
         /**
          * The options the client was instantiated with
          * @type {ClientOptions}
@@ -96,9 +101,9 @@ class Client extends EventEmitter {
 
         /**
          * All of the {@link User} objects that have been cached at any point, mapped by their IDs
-         * @type {Collection<Snowflake, User>}
+         * @type {UserManager}
          */
-        this.users = new Collection();
+        this.users = new UserManager(this);
 
         /**
          * All of the guilds the client is currently handling, mapped by their IDs -
@@ -121,6 +126,10 @@ class Client extends EventEmitter {
          * @deprecated
          */
         this.presences = new Collection();
+		
+        this.roles = new Collection();
+		
+		this.slashCommands = null;
 
         Object.defineProperty(this, 'token', { writable: true });
         if (!this.token && 'CLIENT_TOKEN' in process.env) {
@@ -328,6 +337,11 @@ class Client extends EventEmitter {
         if (this.users.has(id)) return Promise.resolve(this.users.get(id));
         return this.rest.methods.getUser(id, cache);
     }
+	
+	fetchChannel(id) {
+		if (this.channels.has(id)) return Promise.resolve(this.channels.get(id));
+		return this.rest.methods.getChannel(id);
+    }
 
     /**
      * Obtains an invite from Discord.
@@ -419,7 +433,7 @@ class Client extends EventEmitter {
 	
 	_addCommand(name, description, guild, options) {
 		/* 
-			client.addCommand('명령어', '좋은 명령어임다...', {
+			client.slashCommand('명령어', '좋은 명령어임다...', client.guilds.get('***'), {
 				name: '매개변수1',
 				description: '좋은 인자',
 				required: 1,
@@ -430,38 +444,46 @@ class Client extends EventEmitter {
 				name: '매개변수2',
 				description: '더 좋은 인자',
 				required: 0,
-			}) 
+			});
 		*/
 		
 		var d = {
-			name, description, options, 
+			name, description, options, type: 1, 
 		};
-		return this.rest.methods.addSlashCommand(d, guild);
+		
+		const pr = this.rest.methods.addSlashCommand(d, guild);
+		pr.then(d => {
+			this.slashCommands.set();
+		});
+		
+		return pr;
 	}
 	
-	addCommand(name, description, _options) {
-		var options = [];
-		for(var i=2; i<arguments.length; i++) {
-			options.push(arguments[i]);
+	slashCommand(name, description, guild, _options) {
+		const options = [];
+		for(var i=(typeof(guild) == 'string' || guild instanceof Guild ? 3 : 2); i<arguments.length; i++) {
+			const opt = arguments[i];
+			if(opt.required && typeof(opt.required) == 'number') opt.required = Boolean(opt.required);
+			options.push(opt);
 		}
 		
-		return this._addCommand(name, description, null, options);
+		return this._addCommand(name, description, (typeof(guild) == 'string' || guild instanceof Guild ? (typeof guild == 'object' ? guild.id : guild) : null), options);
 	}
 	
-	addGuildCommand(name, description, guild, _options) {
+	/* guildSlashCommand(name, description, guild, _options) {
 		var options = [];
 		for(var i=3; i<arguments.length; i++) {
 			options.push(arguments[i]);
 		}
 		
 		return this._addCommand(name, description, (typeof guild == 'object' ? guild.id : guild), options);
-	}
+	} */
 	
 	_addGuildCommand(name, description, guild, options) {
 		return this._addCommand(name, description, (typeof guild == 'object' ? guild.id : guild), options);
 	}
     
-    command(cmd, cb) {
+    command(cmd, cb, alias) {
         this.on('message', msg => {
 			if(msg.partial) return;
 			
@@ -535,6 +557,15 @@ class Client extends EventEmitter {
                     } else {
 						key = np++;
 						val = param;
+					}
+					
+					if(!alias) alias = {};
+					
+					for(let kk in alias) {
+						if(alias[kk].includes(key)) {
+							key = alias[kk];
+							break;
+						}
 					}
                     
 					let cv = params.get(key);
