@@ -10,6 +10,7 @@ const BeforeReadyWhitelist = [
   Constants.WSEvents.GUILD_MEMBERS_CHUNK,
   Constants.WSEvents.GUILD_MEMBER_ADD,
   Constants.WSEvents.GUILD_MEMBER_REMOVE,
+  Constants.WSEvents.GUILD_MEMBER_LIST_UPDATE,
 ];
 
 class WebSocketPacketManager {
@@ -28,6 +29,7 @@ class WebSocketPacketManager {
     this.register(Constants.WSEvents.GUILD_MEMBER_ADD, require('./handlers/GuildMemberAdd'));
     this.register(Constants.WSEvents.GUILD_MEMBER_REMOVE, require('./handlers/GuildMemberRemove'));
     this.register(Constants.WSEvents.GUILD_MEMBER_UPDATE, require('./handlers/GuildMemberUpdate'));
+    this.register(Constants.WSEvents.GUILD_MEMBER_LIST_UPDATE, require('./handlers/GuildMemberListUpdate'));
     this.register(Constants.WSEvents.GUILD_ROLE_CREATE, require('./handlers/GuildRoleCreate'));
     this.register(Constants.WSEvents.GUILD_ROLE_DELETE, require('./handlers/GuildRoleDelete'));
     this.register(Constants.WSEvents.GUILD_ROLE_UPDATE, require('./handlers/GuildRoleUpdate'));
@@ -48,6 +50,8 @@ class WebSocketPacketManager {
     this.register(Constants.WSEvents.VOICE_STATE_UPDATE, require('./handlers/VoiceStateUpdate'));
     this.register(Constants.WSEvents.TYPING_START, require('./handlers/TypingStart'));
     this.register(Constants.WSEvents.MESSAGE_CREATE, require('./handlers/MessageCreate'));
+    this.register(Constants.WSEvents.MESSAGE_CREATE_V13, require('./handlers/MessageCreate'));
+    this.register(Constants.WSEvents.INTERACTION_CREATE, require('./handlers/InteractionCreate'));
     this.register(Constants.WSEvents.MESSAGE_DELETE, require('./handlers/MessageDelete'));
     this.register(Constants.WSEvents.MESSAGE_UPDATE, require('./handlers/MessageUpdate'));
     this.register(Constants.WSEvents.MESSAGE_DELETE_BULK, require('./handlers/MessageDeleteBulk'));

@@ -3,13 +3,13 @@
 const AbstractHandler = require('./AbstractHandler');
 const Constants = require('../../../../util/Constants');
 
-class MessageCreateHandler extends AbstractHandler {
+class InteractionCreateHandler extends AbstractHandler {
   handle(packet) {
     const client = this.packetManager.client;
     const data = packet.d;
-    const response = client.actions.MessageCreate.handle(data);
-    if (response.message) client.emit(Constants.Events.MESSAGE_CREATE, response.message);
-    if (response.message) client.emit(Constants.Events.MESSAGE_CREATE_V13, response.message);
+	// console.log(data);
+    const response = client.actions.InteractionCreate.handle(data);
+    if (response.message) client.emit(Constants.Events.INTERACTION_CREATE, response.message);
   }
 }
 
@@ -19,4 +19,4 @@ class MessageCreateHandler extends AbstractHandler {
  * @param {Message} message The created message
  */
 
-module.exports = MessageCreateHandler;
+module.exports = InteractionCreateHandler;

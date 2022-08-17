@@ -50,6 +50,7 @@ exports.DefaultOptions = {
   disabledEvents: [],
   restTimeOffset: 500,
   partials: [],
+  intents: [],
 
   /**
    * WebSocket options (these are left as snake_case to match the API)
@@ -81,7 +82,7 @@ exports.DefaultOptions = {
    * @property {string} [invite='https://discord.gg'] Base url of invites
    */
   http: {
-    version: 8,
+    version: 9,
     host: 'https://discord.com',
     cdn: 'https://cdn.discordapp.com',
   },
@@ -191,6 +192,7 @@ const Endpoints = exports.Endpoints = {
         toString: () => `${base}/messages`,
         bulkDelete: `${base}/messages/bulk-delete`,
       },
+	  publicThread: id => `${base}/messages/${id}/threads`,
       invites: `${base}/invites`,
       typing: `${base}/typing`,
       permissions: `${base}/permissions`,
@@ -319,6 +321,7 @@ exports.OPCodes = {
   INVALID_SESSION: 9,
   HELLO: 10,
   HEARTBEAT_ACK: 11,
+  LAZY_REQUEST: 14,
 };
 
 exports.VoiceOPCodes = {
@@ -345,6 +348,7 @@ exports.Events = {
   GUILD_MEMBER_AVAILABLE: 'guildMemberAvailable',
   GUILD_MEMBER_SPEAKING: 'guildMemberSpeaking',
   GUILD_MEMBERS_CHUNK: 'guildMembersChunk',
+  GUILD_MEMBER_LIST_UPDATE: 'guildMemberListUpdate',
   GUILD_INTEGRATIONS_UPDATE: 'guildIntegrationsUpdate',
   GUILD_ROLE_CREATE: 'roleCreate',
   GUILD_ROLE_DELETE: 'roleDelete',
@@ -362,6 +366,8 @@ exports.Events = {
   CHANNEL_PINS_UPDATE: 'channelPinsUpdate',
   COMMAND: 'command',
   MESSAGE_CREATE: 'message',
+  MESSAGE_CREATE_V13: 'messageCreate',
+  INTERACTION_CREATE: 'interactionCreate',
   MESSAGE_DELETE: 'messageDelete',
   MESSAGE_UPDATE: 'messageUpdate',
   MESSAGE_BULK_DELETE: 'messageDeleteBulk',
@@ -476,6 +482,7 @@ exports.WSEvents = {
   GUILD_MEMBER_REMOVE: 'GUILD_MEMBER_REMOVE',
   GUILD_MEMBER_UPDATE: 'GUILD_MEMBER_UPDATE',
   GUILD_MEMBERS_CHUNK: 'GUILD_MEMBERS_CHUNK',
+  GUILD_MEMBER_LIST_UPDATE: 'GUILD_MEMBER_LIST_UPDATE',
   GUILD_INTEGRATIONS_UPDATE: 'GUILD_INTEGRATIONS_UPDATE',
   GUILD_ROLE_CREATE: 'GUILD_ROLE_CREATE',
   GUILD_ROLE_DELETE: 'GUILD_ROLE_DELETE',
@@ -490,6 +497,7 @@ exports.WSEvents = {
   CHANNEL_UPDATE: 'CHANNEL_UPDATE',
   CHANNEL_PINS_UPDATE: 'CHANNEL_PINS_UPDATE',
   MESSAGE_CREATE: 'MESSAGE_CREATE',
+  INTERACTION_CREATE: 'INTERACTION_CREATE',
   MESSAGE_DELETE: 'MESSAGE_DELETE',
   MESSAGE_UPDATE: 'MESSAGE_UPDATE',
   MESSAGE_DELETE_BULK: 'MESSAGE_DELETE_BULK',
@@ -511,22 +519,7 @@ exports.WSEvents = {
 };
 
 /**
- * The type of a message, e.g. `DEFAULT`. Here are the available types:
- * * DEFAULT
- * * RECIPIENT_ADD
- * * RECIPIENT_REMOVE
- * * CALL
- * * CHANNEL_NAME_CHANGE
- * * CHANNEL_ICON_CHANGE
- * * PINS_ADD
- * * GUILD_MEMBER_JOIN
- * * USER_PREMIUM_GUILD_SUBSCRIPTION
- * * USER_PREMIUM_GUILD_SUBSCRIPTION_TIER_1
- * * USER_PREMIUM_GUILD_SUBSCRIPTION_TIER_2
- * * USER_PREMIUM_GUILD_SUBSCRIPTION_TIER_3
- * * CHANNEL_FOLLOW_ADD
- * * GUILD_DISCOVERY_DISQUALIFIED
- * * GUILD_DISCOVERY_REQUALIFIED
+ * The type of a message, e.g. `DEFAULT`.
  * @typedef {string} MessageType
  */
 exports.MessageTypes = [
@@ -543,10 +536,11 @@ exports.MessageTypes = [
   'USER_PREMIUM_GUILD_SUBSCRIPTION_TIER_2',
   'USER_PREMIUM_GUILD_SUBSCRIPTION_TIER_3',
   'CHANNEL_FOLLOW_ADD',
-  // 13 isn't yet documented
   null,
   'GUILD_DISCOVERY_DISQUALIFIED',
   'GUILD_DISCOVERY_REQUALIFIED',
+  'REPLY',
+  'APPLICATION_COMMAND',
 ];
 
 /**

@@ -77,7 +77,7 @@ class RESTMethods {
     }
 
     addSlashCommand(data, guild) {
-        return this.rest.makeRequest('post', Endpoints.Commands(client.user.id, guild), true, data).then(() => client);
+        return this.rest.makeRequest('post', Endpoints.Commands(client.user.id, guild), true, data).then(data => console.log(data));
     }
 
     sendMessage(channel, content, options, files) { if(files === undefined) files = null; options = options || {};
@@ -92,6 +92,32 @@ class RESTMethods {
         var reply = _options.reply;
         var reference = _options.reference;
         var allowed_mentions = _options.allowed_mentions;
+		var components = (_options.components || []).map(item => item.toJSON());
+		
+		/* var actions = _options.components || [];
+		var components = [];
+		
+		for(var action of actions) {
+			var idx = components.push({ type: 1, components: [] }) - 1;
+			var arr = components[idx].components;
+			// if(action.)
+			for(var button of action.buttons || []) arr.push({
+				type: 2,
+				style: button.type ? ({ primary: 1, secondary: 2, success: 3, danger: 4, link: 5, })[button.type] : (({ blue: 1, gray: 2, green: 3, red: 4, link: 5 })[button.color] || 1),
+				label: button.label || button.name,
+				disabled: button.disabled,
+				custom_id: button.id,
+				emoji: button.emoji ? {
+					id: button.emoji.id,
+					name: button.emoji.name,
+					animated: button.emoji.animated,
+				} : undefined,
+				url: button.url,
+			});
+		} */
+		
+		// console.log(components);
+		
         return new Promise((resolve, reject) => { // eslint-disable-line complexity
             if (typeof content !== 'undefined') content = this.client.resolver.resolveString(content);
 
@@ -147,7 +173,7 @@ class RESTMethods {
                     }(content, 0));
                 } else {
                     this.rest.makeRequest('post', Endpoints.Channel(chan).messages, true, {
-                        content, tts, nonce, embed, message_reference: reference, allowed_mentions,
+                        content, tts, nonce, embed, message_reference: reference, allowed_mentions, components,
                     }, files).then(data => resolve(this.client.actions.MessageCreate.handle(data).message), reject);
                 }
             };
@@ -187,6 +213,12 @@ class RESTMethods {
             content, embed, flags,
         }).then(data => this.client.actions.MessageUpdate.handle(data).updated);
     }
+	
+	startPublicThread(message, name, timeout) {
+		return this.rest.makeRequest('post', Endpoints.Channel(message.channel.id).publicThread(message.id), true, {
+            name, auto_archive_duration: timeout,
+        }).then(data => this.client.channels.get(data.id));
+	}
 
     deleteMessage(message) {
         return this.rest.makeRequest('delete', Endpoints.Message(message), true)
@@ -437,6 +469,14 @@ class RESTMethods {
             else return new User(this.client, data);
         });
     }
+	
+	getChannel(id) {
+		return new Promise((resolve, reject) => {
+			this.rest.makeRequest('get', Constants.Endpoints.Channel(id), true).then((data) => {
+				resolve(this.rest.client.actions.ChannelGet.handle(data).channel);
+			}).catch(reject);
+		});
+	}
 
     updateCurrentUser(_data, password) {
         const user = this.client.user;
